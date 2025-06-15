@@ -3,106 +3,747 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <unordered_set>
+#define NOMINMAX
+#include <Windows.h>
 using namespace std;
 
-int board_2024180014[19][19]{};
+// 뒤에 학번 붙이는 건 이후 진행할 예정
+constexpr int BLACK_2024180014{ 1 };
+constexpr int WHITE_2024180014{ 2 };
+constexpr int EMPTY_2024180014{ 0 };
+constexpr int Board_Size_2024180014{ 19 };
 
-constexpr vector<pair<int, int>> No_Move{null, null};
-constexpr int INF{numeric_limit<int>::min()};
-struct Move {
-    vector<pair<int, int>> location;
-    
-    Move() {}
-    ~Move() {}
+enum class StoneType {
+    EMPTY,
+    BLACK,
+    WHITE,
+    WALL
 };
-struct Node
-{
-    
-    vector<pair<int, int>> location;
+class Board {
+    vector<vector<StoneType>> board;
+
+public:
+    static constexpr int SIZE{ Board_Size_2024180014 };
+
+    Board() : board(SIZE, vector<StoneType>(SIZE, StoneType::EMPTY)) {}
+
+    bool placeStone(const Move& move, StoneType stone) {
+        if (!isOnBoard(move.row, move.col) || getStone(move.row, move.col) != StoneType::EMPTY) {
+            return false;
+        }
+        board[move.row][move.col] = stone;
+        return true;
+    }
+    void retractMove(const Move& move) {
+        if (isOnBoard(move.row, move.col)) {
+            board[move.row][move.col] = StoneType::EMPTY;
+        }
+    }
+
+    bool isEmpty() const {
+        for (int r = 0; r < SIZE; ++r) {
+            for (int c = 0; c < SIZE; ++c) {
+                if (this->board[r][c] != StoneType::EMPTY) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    StoneType getStone(int r, int c) const {
+        if (!isOnBoard(r, c)) {
+            throw out_of_range("Board coordinates are out of range.");
+        }
+        return board[r][c];
+    }
+    bool isOnBoard(int r, int c) const {
+        return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+    }
+    void show() const {
+        cout << "  ";
+        for (int i = 0; i < SIZE; ++i) {
+            printf("%2d", i);
+        }
+        cout << endl;
+
+        for (int r = 0; r < SIZE; ++r) {
+            printf("%2d ", r);
+            for (int c = 0; c < SIZE; ++c) {
+                char stone_char = '.';
+                if (board[r][c] == StoneType::BLACK) stone_char = 'X';
+                else if (board[r][c] == StoneType::WHITE) stone_char = 'O';
+                cout << stone_char << " ";
+            }
+            cout << endl;
+        }
+    }
+    StoneType checkForWin(const Move& last_move) const;
+};
+struct Move {
+    int row; // 행 (y 좌표)
+    int col; // 열 (x 좌표)
+
+    Move() : row(-1), col(-1) {}
+    Move(int r, int c) : row(r), col(c) {}
+
+    // --- 유틸리티 함수들 (선택 사항이지만 구현을 강력히 권장합니다) ---
+    bool isNull() const {
+        return row == -1 && col == -1;
+    }
+    bool operator==(const Move& other) const {
+        return row == other.row && col == other.col;
+    }
+    bool operator!=(const Move& other) const {
+        return !(*this == other);
+    }
+    bool operator<(const Move& other) const {
+        if (row != other.row) {
+            return row < other.row;
+        }
+        return col < other.col;
+    }
+    /*
+    string toString() const {
+        if (isNull()) {
+            return "Move(Null)";
+        }
+        stringstream ss;
+        ss << "Move(" << row << ", " << col << ")";
+        return ss.str();
+    }
+    */
+};
+struct Node {
+    Move location;
     int static_value{};
     Node* parent;
-    vector<Node*> childrens;
-    
-    Node(Node* parent, vector<Move>* locaction_sum, Move gen_location) {
-        for (Move temp : location_sum) {
-            location.push_back(temp);
-        }
-        locatiton.push_back(gen_location);
-    }
+    vector<Node*> children;
+
+    Node() : parent(nullptr), location(Move()) {}
+    Node(Node* parent, Move gen_location) {}
     ~Node() {
-        childrens.clear();
+        for (Node* child : children) {
+            delete child;
+        }
     }
-    
-    int get_static_value {
-        return static_value;
-    }
-    vector<Move>* get_possible_moves(Move next_location) {
+
+    vector<Move> get_possible_moves() {
         vector<Move> possible_moves;
-        for(Node* next_node : childrens) {
-            possible_moves.push_back(next_node.location);
+        for (auto next_node : children) {
+            Move next_node_location = next_node->location;
+            possible_moves.push_back(next_node_location);
         }
-        
-        return &possible_moves;
+
+        return possible_moves;
     }
-    Node* make_move(Move location) {
-        for (Node* target_node : childrens) {
-            if (location == target_node->location) return target_node;
+    Node make_move(Move location) {
+        for (auto target_node : children) {
+            if (target_node->location == location) return *target_node;
         }
     }
-    vector<Node*> get_children() {
-        return children;
-    }
+    // bool is_leaf(const Board& board) const;
+    void generate_children(const Board& board, StoneType current_player);
 };
-class GameTree
-{
+class GameTree {
     Node* Root;
     int Size{};
-    
+
 public:
-    GameTree() : Root(nullptr) a{}
+    GameTree() : Root(nullptr) {}
     ~GameTree() {
         delete Root;
     }
-    
-    
-}
 
-Move find_best_move(Node current_root_node, int search_depth)
-{
-    Move best_move{No_Move};
-    int best_value{-INF};
 
-    for(Move possible_moves : current_root_node.get_possible_moves()) {
-        Node next_node_state{current_root_node.make_move(possible_moves)};
-        int next_node_value{minimax(next_node_state, search_depth - 1, false)};
-        
-        if (next_node_value > best_value) {
-          best_value = next_node_value;
-          best_move = possible_moves;
+};
+struct PlayerPatterns {
+    // 우선순위 나열
+    vector<Move> win_moves;                         // 1. ...XXXXX...
+    vector<Move> open_four_moves;                   // 2. ..._XXXX_...
+    vector<Move> four_three_moves;                  // 사삼(4-3)을 만드는 위치
+    vector<Move> close_four_moves;                  // 3. ...BXXXX_... | ..._XXXXB...
+    vector<Move> open_three_moves;                  // 4. ..._XXX_...
+    vector<Move> blanked_open_three_moves;          // 5. ..._X_XX_... | ..._XX_X_...
+    vector<Move> close_three_moves;                 // 6. ...BXXX_... | ..._XXXB...
+    vector<Move> blanked_close_three_moves;         // 7. ...BX_XX_... | ...BXX_X_... | ..._X_XXB... | ..._XX_XB...
+    vector<Move> open_two_moves;                    // 8. ..._XX_...
+    vector<Move> double_blanked_open_three_moves;   // 9. ..._X_X_X_...
+    vector<Move> close_two_moves;                   // 10. ...BXX_... | ..._XXB...
+    vector<Move> blanked_open_two_moves;            // 11. ..._X_X_...
+    vector<Move> double_blanked_open_two_moves;     // 12. ..._X__X_...
+
+    void clear() {
+        win_moves.clear();
+        open_four_moves.clear();
+        four_three_moves.clear();
+        close_four_moves.clear();
+        open_three_moves.clear();
+        blanked_open_three_moves.clear();
+        close_three_moves.clear();
+        blanked_close_three_moves.clear();
+        open_two_moves.clear();
+        close_two_moves.clear();
+        blanked_open_two_moves.clear();
+        double_blanked_open_two_moves.clear();
+    }
+};
+class PatternAnalyzer {
+private:
+    PlayerPatterns ai_patterns;      // AI의 패턴 정보
+    PlayerPatterns opponent_patterns; // 상대방의 패턴 정보
+
+    void checkPatternsAfterMove(const Board& board, int r, int c, StoneType player, PlayerPatterns& patterns);
+    void analyzeLine(const Board& board, int r, int c, int dy, int dx, StoneType player, PlayerPatterns& patterns);
+    void findPatternsInSegment(const vector<StoneType>& segment, int r, int c, StoneType player, PlayerPatterns& patterns);
+
+public:
+    PatternAnalyzer() = default;
+
+    void analyze(const Board& board, StoneType ai_player);
+    
+    // Get AI Moves
+    const vector<Move>& getAIWinMoves() const { return ai_patterns.win_moves; }
+    const vector<Move>& getAIOpenFourMoves() const { return ai_patterns.open_four_moves; }
+    const vector<Move>& getAIFourThreeMoves() const { return ai_patterns.four_three_moves; }
+    const vector<Move>& getAICloseFourMoves() const { return ai_patterns.close_four_moves; }
+    const vector<Move>& getAIOpenThreeMoves() const { return ai_patterns.open_three_moves; }
+    const vector<Move>& getAIBlankedOpenThreeMoves() const { return ai_patterns.blanked_open_three_moves; }
+    const vector<Move>& getAICloseThreeMoves() const { return ai_patterns.close_three_moves; }
+    const vector<Move>& getAIBlankedCloseThreeMoves() const { return ai_patterns.blanked_close_three_moves; }
+    const vector<Move>& getAIOpenTwoMoves() const { return ai_patterns.open_two_moves; }
+    const vector<Move>& getAICloseTwoMoves() const { return ai_patterns.close_two_moves; }
+    const vector<Move>& getAIBlankedOpenTwoMoves() const { return ai_patterns.blanked_open_two_moves; }
+    const vector<Move>& getAIDoubleBlankedOpenTwoMoves() const { return ai_patterns.double_blanked_open_two_moves; }
+
+    // Get Opponent Moves
+    const vector<Move>& getOpponentWinMoves() const { return opponent_patterns.win_moves; }
+    const vector<Move>& getOpponentOpenFourMoves() const { return opponent_patterns.open_four_moves; }
+    const vector<Move>& getOpponentFourThreeMoves() const { return opponent_patterns.four_three_moves; }
+    const vector<Move>& getOpponentCloseFourMoves() const { return opponent_patterns.close_four_moves; }
+    const vector<Move>& getOpponentOpenThreeMoves() const { return opponent_patterns.open_three_moves; }
+    const vector<Move>& getOpponentBlankedOpenThreeMoves() const { return opponent_patterns.blanked_open_three_moves; }
+    const vector<Move>& getOpponentCloseThreeMoves() const { return opponent_patterns.close_three_moves; }
+    const vector<Move>& getOpponentBlankedCloseThreeMoves() const { return opponent_patterns.blanked_close_three_moves; }
+    const vector<Move>& getOpponentOpenTwoMoves() const { return opponent_patterns.open_two_moves; }
+    const vector<Move>& getOpponentCloseTwoMoves() const { return opponent_patterns.close_two_moves; }
+    const vector<Move>& getOpponentBlankedOpenTwoMoves() const { return opponent_patterns.blanked_open_two_moves; }
+    const vector<Move>& getOpponentDoubleBlankedOpenTwoMoves() const { return opponent_patterns.double_blanked_open_two_moves; }
+};
+
+Board board_2024180014;
+
+Move find_best_move(const Board& current_real_board, int search_depth, StoneType ai_stone_type) {
+    Node* root_node = new Node(); // 루트 노드 생성
+    Board board_for_search = current_real_board; // 탐색을 위한 보드 복사
+
+    Move best_move;
+    int best_value = -INFINITY;
+
+    // 루트 노드의 자식들을 먼저 생성
+    root_node->generate_children(board_for_search, ai_stone_type);
+
+    // 각 후보 수에 대해 minimax 값을 계산
+    for (Node* child_node : root_node->children) {
+        // AI가 수를 두는 상황을 시뮬레이션
+        board_for_search.placeStone(child_node->location, ai_stone_type);
+
+        // 다음은 상대 턴(Min)이므로 is_my_turn = false
+        int move_value = minimax(child_node, board_for_search, search_depth - 1, false, ai_stone_type);
+
+        // 시뮬레이션 했던 수를 되돌림
+        board_for_search.retractMove(child_node->location);
+
+        if (move_value > best_value) {
+            best_value = move_value;
+            best_move = child_node->location;
         }
     }
-    
+
+    delete root_node; // 탐색이 끝난 트리의 메모리 해제
     return best_move;
 }
-
-int minimax(Node node, int depth, bool is_myTurn) {
-    if (depth = 0 || node.is_leaf()) {
-        return static_eval_func(node.get_location_sum());
+int minimax(Node* node, Board& board, int depth, bool ismy_turn, StoneType ai_stone_type)
+{
+    if (depth == 0) {
+        return static_eval_func(board, ai_stone_type);
     }
 
-    if (is_myTurn) {
-        int max_eval = -INF;
-        for (Node child_node : node.get_children()) {
-            int eval{minimax(child_node, depth - 1, false)};
-            vector<pair<int, int>> temp{minmanx(max_eval, eval)};
-            max_eval = temp.second;
+    // 모든 함수들과 로직을 구현하는 지금 백돌을 기준으로
+    StoneType current_player = ismy_turn ? ai_stone_type : (ai_stone_type == StoneType::BLACK ? StoneType::WHITE : StoneType::BLACK);
+    node->generate_children(board, current_player);
+
+    if (node->children.empty()) {
+        return static_eval_func(board, ai_stone_type);
+    }
+
+    if (ismy_turn) {
+        int max_eval = -INFINITY;
+        for (Node* child_node : node->children) {
+            board.placeStone(child_node->location, current_player);
+            if (board.checkForWin(child_node->location) != StoneType::EMPTY) {
+                max_eval = std::max(max_eval, static_eval_func(board, ai_stone_type));
+            }
+            else {
+                int eval = minimax(child_node, board, depth - 1, false, ai_stone_type);
+                max_eval = std::max(max_eval, eval);
+            }
+
+            board.retractMove(child_node->location);
         }
         return max_eval;
-    } else {
-          int min_eval = INF;
-          for (Node chile_node : node.get_children())
+    }
+    else {
+        int min_eval = INFINITY;
+        for (Node* child_node : node->children) {
+            board.placeStone(child_node->location, current_player);
+            if (board.checkForWin(child_node->location) != StoneType::EMPTY) {
+                min_eval = std::min(min_eval, static_eval_func(board, ai_stone_type));
+            }
+            else {
+                int eval = minimax(child_node, board, depth - 1, true, ai_stone_type);
+                min_eval = std::min(min_eval, eval);
+            }
+
+            board.retractMove(child_node->location);
+        }
+        return min_eval;
+    }
+}
+int static_eval_func(Board& board, StoneType ai_stone_type)
+{
+
+}
+vector<Move> generate_children_pattern_based(const Board& board, StoneType ai_player) {
+    PatternAnalyzer analyzer;
+    analyzer.analyze(board, ai_player);
+    
+    vector<Move> level3_moves; // 나의 필승 패턴 (사삼, 열린 넷)
+    vector<Move> level4_moves; // 상대의 필승 패턴 방어
+    vector<Move> level5_moves; // 나의 열린 삼
+    vector<Move> level6_moves; // 상대의 열린 삼 방어
+
+    // level 1
+    if (!analyzer.getAIWinMoves().empty()) {
+        return analyzer.getAIWinMoves();
+    }
+    // level 2
+    if (!analyzer.getOpponentWinMoves().empty()) {
+        return analyzer.getOpponentWinMoves();
+    }
+
+    // 3, 4, 5, 6 순위의 수를 조합하여 반환 (더욱 정교한 방식)
+    vector<Move> candidates;
+    candidates.insert(candidates.end(), level3_moves.begin(), level3_moves.end());
+    candidates.insert(candidates.end(), level4_moves.begin(), level4_moves.end());
+    candidates.insert(candidates.end(), level5_moves.begin(), level5_moves.end());
+    candidates.insert(candidates.end(), level6_moves.begin(), level6_moves.end());
+
+    // 만약 중요한 후보 수가 하나도 없다면? -> 주변부 탐색으로 대체 (Fallback)
+    if (candidates.empty()) {
+        // 휴리스틱 (돌 주위의 위치를 파악하여 빈곳에 대해 탐색)
+        return generate_neighborhood_moves(board);
+    }
+    else {
+        // 중복 제거 후 반환 (한 수가 여러 카테고리에 속할 수 있으므로)
+        sort(candidates.begin(), candidates.end()); // 정렬
+        candidates.erase(unique(candidates.begin(), candidates.end()), candidates.end()); // 중복 제거
+        return candidates;
     }
 }
 
+// Node 멤버 함수
+void Node::generate_children(const Board& current_board, StoneType player_to_move) {
+    vector<Move> candidates;
+
+    PatternAnalyzer analyzer;
+    analyzer.analyze(current_board, player_to_move);
+
+    std::vector<Move> candidate_moves;
+
+    // 1순위: 내가 즉시 이기는 수
+    const auto& ai_win_moves = analyzer.getAIWinMoves();
+    if (!ai_win_moves.empty()) {
+        candidates = ai_win_moves;
+    }
+    // 2순위: 상대가 즉시 이기는 수 (1순위가 없을 경우)
+    else {
+        const auto& opponent_win_moves = analyzer.getOpponentWinMoves();
+        if (!opponent_win_moves.empty()) {
+            candidates = opponent_win_moves;
+        }
+        // 3순위 이후: 여러 중요 패턴들을 조합
+        else {
+            const auto& ai_unstoppable = analyzer.getAIFourThreeMoves();
+            candidates.insert(candidates.end(), ai_unstoppable.begin(), ai_unstoppable.end());
+            const auto& ai_open_fours = analyzer.getAIOpenFourMoves();
+            candidates.insert(candidates.end(), ai_open_fours.begin(), ai_open_fours.end());
+
+            const auto& opponent_unstoppable = analyzer.getOpponentFourThreeMoves();
+            candidates.insert(candidates.end(), opponent_unstoppable.begin(), opponent_unstoppable.end());
+            const auto& opponent_open_fours = analyzer.getOpponentOpenFourMoves();
+            candidates.insert(candidates.end(), opponent_open_fours.begin(), opponent_open_fours.end());
+
+            const auto& ai_open_threes = analyzer.getAIOpenThreeMoves();
+            candidates.insert(candidates.end(), ai_open_threes.begin(), ai_open_threes.end());
+            const auto& opponent_open_threes = analyzer.getOpponentOpenThreeMoves();
+            candidates.insert(candidates.end(), opponent_open_threes.begin(), opponent_open_threes.end());
+        }
+    }
+
+    // 3. 최종 후보 수 목록 처리
+
+    // 만약 위에서 유의미한 후보 수를 하나도 찾지 못했다면,
+    // 주변부 탐색으로 기본적인 후보 수를 생성합니다.
+    if (candidate_moves.empty()) {
+        candidate_moves = generate_neighborhood_moves(current_board);
+    }
+    // 만약 게임 시작 첫 수라 주변에 아무 돌도 없다면, 중앙 근처에 두도록 처리
+    if (candidate_moves.empty() && current_board.isEmpty()) {
+        candidate_moves.push_back(Move(Board::SIZE / 2, Board::SIZE / 2));
+    }
 
 
+    // 4. 기존 자식 노드를 정리하고 새로운 자식 노드를 생성합니다.
+
+    for (Node* child : this->children) {
+        delete child;
+    }
+    this->children.clear();
+
+    for (const Move& move_candidate : candidate_moves) {
+        this->children.push_back(new Node(this, move_candidate));
+    }
+}
+// PatternAnalyzer 멤버 함수
+void PatternAnalyzer::checkPatternsAfterMove(const Board& board, int r, int c, StoneType player, PlayerPatterns& patterns) {
+    // 4개의 축(가로, 세로, 대각선 \, 대각선 /)에 대해 라인 분석
+    analyzeLine(board, r, c, 0, 1, player, patterns);  // 가로 (dy=0, dx=1)
+    analyzeLine(board, r, c, 1, 0, player, patterns);  // 세로 (dy=1, dx=0)
+    analyzeLine(board, r, c, 1, 1, player, patterns);  // 대각선 \ (dy=1, dx=1)
+    analyzeLine(board, r, c, 1, -1, player, patterns); // 대각선 / (dy=1, dx=-1)
+}
+void PatternAnalyzer::analyze(const Board& board, StoneType ai_player) {
+    ai_patterns.clear();
+    opponent_patterns.clear();
+    StoneType opponent_player = (ai_player == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
+
+    for (int r = 0; r < Board::SIZE; ++r) {
+        for (int c = 0; c < Board::SIZE; ++c) {
+            if (board.getStone(r, c) == StoneType::EMPTY) {
+                checkPatternsAfterMove(board, r, c, ai_player, ai_patterns);
+                checkPatternsAfterMove(board, r, c, opponent_player, opponent_patterns);
+            }
+        }
+    }
+}
+// analyzeLine 함수: 특정 라인을 9칸짜리 벡터로 추출
+void PatternAnalyzer::analyzeLine(const Board& board, int r, int c, int dy, int dx, StoneType player, PlayerPatterns& patterns) {
+    vector<StoneType> segment;
+    segment.reserve(9);
+
+    // (r, c)를 중심으로 -4칸부터 +4칸까지 총 9칸의 정보를 추출
+    for (int i = -4; i <= 4; ++i) {
+        int nr = r + i * dy;
+        int nc = c + i * dx;
+
+        if (board.isOnBoard(nr, nc)) {
+            // 만약 현재 위치(i=0)라면, 방금 놓은 돌(player)로 간주
+            if (i == 0) segment.push_back(player);
+            else segment.push_back(board.getStone(nr, nc));
+        }
+        else {
+            segment.push_back(StoneType::WALL); // 보드 밖은 벽으로 처리
+        }
+    }
+
+    // 추출된 9칸짜리 세그먼트를 분석 함수에 넘김
+    findPatternsInSegment(segment, r, c, player, patterns);
+}
+inline bool isBlocker(StoneType stone_to_check, StoneType opponent_player) {
+    return stone_to_check == opponent_player || stone_to_check == StoneType::WALL;
+}
+// findPatternsInSegment 함수: 추출된 벡터에서 패턴을 찾아내는 핵심 로직
+void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, int r, int c, StoneType player, PlayerPatterns& patterns) {
+    // segment의 크기는 9, 방금 놓은 돌은 항상 중앙인 인덱스 4에 위치함.
+    StoneType opponent = (player == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
+    StoneType empty = StoneType::EMPTY;
+
+    // 1. --- 5목 체크: ...XXXXX...---
+    // 9칸 세그먼트 안에서 5목이 되는 모든 경우를 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        // 이 패턴이 중앙(index 4)의 돌을 포함하는지 확인
+        if (i <= 4 && i + 4 >= 4) {
+            if (segment[i] == player &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == player && segment[i + 4] == player) {
+                patterns.win_moves.push_back(Move(r, c));
+                return; // 5목을 찾으면 이 라인에 대한 더 이상의 분석은 불필요
+            }
+        }
+    }
+
+    // 2. --- 열린 4목 체크: ..._XXXX_... ---
+    // 9칸 세그먼트 안에서 창문 크기 6인 _XXXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 6; ++i) {
+        if (i <= 4 && i + 5 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == player && segment[i + 4] == player &&
+                segment[i + 5] == empty) {
+                patterns.open_four_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 3. --- 막힌 4목 체크: ...BXXXX_... | ..._XXXXB... ---
+    // 9칸 세그먼트 안에서 6목이 되는 모든 경우를 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 5 >= 4) {
+            if (isBlocker(segment[i], opponent) &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == player && segment[i + 4] == player &&
+                segment[i + 5] == empty) {
+                patterns.close_four_moves.push_back(Move(r, c));
+            }
+            else if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == player && segment[i + 4] == player &&
+                isBlocker(segment[i + 5], opponent)) {
+                patterns.close_four_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 4. --- 열린 3목 체크: ..._XXX_... ---
+    // 9칸 세그먼트 안에서 창문 크기 5인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 4 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == player && segment[i + 4] == empty) {
+                patterns.open_three_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 5. --- 한 칸 띈 열린 3목 체크: ..._X_XX_... | ..._XX_X_... ---
+    // 9칸 세그먼트 안에서 창문 크기 6인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 5 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == empty &&
+                segment[i + 3] == player && segment[i + 4] == player &&
+                segment[i + 5] == empty) {
+                patterns.blanked_open_three_moves.push_back(Move(r, c));
+            }
+            else if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == empty && segment[i + 4] == player &&
+                segment[i + 5] == empty) {
+                patterns.blanked_open_three_moves.push_back(Move(r, c));
+                }
+        }
+    }
+
+    // 6. --- 막힌 3목 체크 : ...BXXX_... | ..._XXXB... ---
+    // 9칸 세그먼트 안에서 창문 크기 5인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 4 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (isBlocker(segment[i], opponent) &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == player && segment[i + 4] == empty) {
+                patterns.close_three_moves.push_back(Move(r, c));
+            }
+            else if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == player && isBlocker(segment[i + 4], opponent)) {
+                patterns.close_three_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 7. --- 막힌 한 칸 띈 3목 체크 : ...BX_XX_... | ...BXX_X_... | ..._X_XXB... | ..._XX_XB... ---
+    // 9칸 세그먼트 안에서 창문 크기 6인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 5 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (isBlocker(segment[i], opponent) &&
+                segment[i + 1] == player && segment[i + 2] == empty &&
+                segment[i + 3] == player && segment[i + 4] == player &&
+                segment[i + 5] == empty) {
+                patterns.blanked_close_three_moves.push_back(Move(r, c));
+            }
+            else if (isBlocker(segment[i], opponent) &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == empty && segment[i + 4] == player &&
+                segment[i + 5] == empty) {
+                patterns.blanked_close_three_moves.push_back(Move(r, c));
+            }
+            else if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == empty &&
+                segment[i + 3] == player && segment[i + 4] == player &&
+                isBlocker(segment[i + 5], opponent)) {
+                patterns.blanked_close_three_moves.push_back(Move(r, c));
+            }
+            else if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == empty && segment[i + 4] == player &&
+                isBlocker(segment[i + 5], opponent)) {
+                patterns.blanked_close_three_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 8. --- 열린 2목 체크: ..._XX_... ---
+    // 9칸 세그먼트 안에서 창문 크기 4인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 3 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == empty) {
+                patterns.open_two_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 9. --- 두 칸 띈 열린 3목 체크: ..._X_X_X_... ---
+    // 9칸 세그먼트 안에서 창문 크기 7인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 6 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == empty &&
+                segment[i + 3] == player && segment[i + 4] == empty &&
+                segment[i + 5] == player && segment[i + 6] == empty) {
+                patterns.double_blanked_open_three_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 10. --- 막힌 2목 체크: ...BXX_... | ..._XXB... ---
+    // 9칸 세그먼트 안에서 창문 크기 4인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 3 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (isBlocker(segment[i], opponent) &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == empty) {
+                patterns.close_two_moves.push_back(Move(r, c));
+            }
+            else if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                isBlocker(segment[i + 3], opponent)) {
+                patterns.close_two_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 11. --- 한 칸 띈 2목 체크: ..._X_X_... ---
+    // 9칸 세그먼트 안에서 창문 크기 5인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 4 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == empty &&
+                segment[i + 3] == player && segment[i + 4] == empty) {
+                patterns.blanked_open_two_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 12. --- 두 칸 띈 2목 체크: ..._X__X_... ---
+    // 9칸 세그먼트 안에서 창문 크기 6인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 5 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == empty &&
+                segment[i + 3] == empty && segment[i + 4] == player &&
+                segment[i + 5] == empty) {
+                patterns.double_blanked_open_two_moves.push_back(Move(r, c));
+            }
+        }
+    }
+}
+vector<Move> generate_neighborhood_moves(const Board& board) {
+    unordered_set<Move> candidate_set;
+
+    for (int r = 0; r < Board::SIZE; ++r) {
+        for (int c = 0; c < Board::SIZE; ++c) {
+            if (board.getStone(r, c) == StoneType::EMPTY) {
+                continue;
+            }
+            for (int dy = -2; dy <= 2; ++dy) {
+                for (int dx = -2; dx <= 2; ++dx) {
+                    if (dx == 0 && dy == 0) continue;
+
+                    int nr = r + dy;
+                    int nc = c + dx;
+
+                    if (board.isOnBoard(nr, nc) && board.getStone(nr, nc) == StoneType::EMPTY) {
+                        candidate_set.insert(Move(nr, nc));
+                    }
+                }
+            }
+        }
+    }
+
+    // set에 저장된 후보들을 vector로 변환하여 반환
+    return std::vector<Move>(candidate_set.begin(), candidate_set.end());
+}
+// Board 멤버 함수
+StoneType Board::checkForWin(const Move& last_move) const {
+    int r = last_move.row;
+    int c = last_move.col;
+    StoneType stone = this->getStone(r, c);
+
+    if (stone == StoneType::EMPTY) {
+        return StoneType::EMPTY;
+    }
+
+    // 4개의 축(가로, 세로, 대각선\, 대각선/)에 대한 방향 벡터
+    const int dr[] = { 0, 1, 1, 1 };
+    const int dc[] = { 1, 0, 1, -1 };
+
+    for (int i = 0; i < 4; ++i) {
+        int consecutive_count = 1; // 방금 놓은 돌 포함
+
+        // 정방향(+)으로 같은 돌 세기
+        for (int j = 1; j < 5; ++j) {
+            int nr = r + j * dr[i];
+            int nc = c + j * dc[i];
+            if (isOnBoard(nr, nc) && getStone(nr, nc) == stone) {
+                consecutive_count++;
+            }
+            else {
+                break;
+            }
+        }
+
+        // 역방향(-)으로 같은 돌 세기
+        for (int j = 1; j < 5; ++j) {
+            int nr = r - j * dr[i];
+            int nc = c - j * dc[i];
+            if (isOnBoard(nr, nc) && getStone(nr, nc) == stone) {
+                consecutive_count++;
+            }
+            else {
+                break;
+            }
+        }
+
+        if (consecutive_count >= 5) {
+            return stone; // 오목 완성!
+        }
+    }
+
+    return StoneType::EMPTY; // 오목이 완성되지 않음
+}
+
+namespace std {
+    template <>
+    struct hash<Move> {
+        size_t operator()(const Move& m) const {
+            // 간단하면서도 효과적인 해시 조합 방식
+            size_t h1 = hash<int>()(m.row);
+            size_t h2 = hash<int>()(m.col);
+            return h1 ^ (h2 << 1);
+        }
+    };
+}
