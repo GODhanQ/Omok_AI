@@ -163,28 +163,35 @@ struct PlayerPatterns {
     vector<Move> open_four_moves;                   // 2. ..._XXXX_...
     vector<Move> four_three_moves;                  // 사삼(4-3)을 만드는 위치
     vector<Move> close_four_moves;                  // 3. ...BXXXX_... | ..._XXXXB...
-    vector<Move> open_three_moves;                  // 4. ..._XXX_...
-    vector<Move> blanked_open_three_moves;          // 5. ..._X_XX_... | ..._XX_X_...
-    vector<Move> close_three_moves;                 // 6. ...BXXX_... | ..._XXXB...
-    vector<Move> blanked_close_three_moves;         // 7. ...BX_XX_... | ...BXX_X_... | ..._X_XXB... | ..._XX_XB...
-    vector<Move> open_two_moves;                    // 8. ..._XX_...
-    vector<Move> double_blanked_open_three_moves;   // 9. ..._X_X_X_...
-    vector<Move> close_two_moves;                   // 10. ...BXX_... | ..._XXB...
-    vector<Move> blanked_open_two_moves;            // 11. ..._X_X_...
-    vector<Move> double_blanked_open_two_moves;     // 12. ..._X__X_...
+    vector<Move> blanked_four_moves;                // 4. ...X_XXX... | ...XX_XX... | ...XXX_X...
+    vector<Move> open_three_moves;                  // 5. ..._XXX_...
+    vector<Move> blanked_open_three_moves;          // 6. ..._X_XX_... | ..._XX_X_...
+    vector<Move> close_three_moves;                 // 7. ...BXXX_... | ..._XXXB...
+    vector<Move> blanked_close_three_moves;         // 8. ...BX_XX_... | ...BXX_X_... | ..._X_XXB... | ..._XX_XB...
+    vector<Move> open_two_moves;                    // 9. ..._XX_...
+    vector<Move> double_blanked_open_three_moves;   // 10. ..._X_X_X_...
+    vector<Move> double_blanked_close_three_moves;  // 11. ...BX_X_X_... | ..._X_X_XB...
+    vector<Move> close_two_moves;                   // 12. ...BXX_... | ..._XXB...
+    vector<Move> blanked_open_two_moves;            // 13. ..._X_X_...
+    vector<Move> blanked_close_two_moves;           // 14. ...BX_X_... | ..._X_XB...
+    vector<Move> double_blanked_open_two_moves;     // 15. ..._X__X_...
 
     void clear() {
         win_moves.clear();
         open_four_moves.clear();
         four_three_moves.clear();
         close_four_moves.clear();
+        blanked_four_moves.clear();
         open_three_moves.clear();
         blanked_open_three_moves.clear();
         close_three_moves.clear();
         blanked_close_three_moves.clear();
         open_two_moves.clear();
+        double_blanked_open_three_moves.clear();
+        double_blanked_close_three_moves.clear();
         close_two_moves.clear();
         blanked_open_two_moves.clear();
+        blanked_close_two_moves.clear();
         double_blanked_open_two_moves.clear();
     }
 };
@@ -207,13 +214,17 @@ public:
     const vector<Move>& getAIOpenFourMoves() const { return ai_patterns.open_four_moves; }
     const vector<Move>& getAIFourThreeMoves() const { return ai_patterns.four_three_moves; }
     const vector<Move>& getAICloseFourMoves() const { return ai_patterns.close_four_moves; }
+    const vector<Move>& getAIBlankedFourMoves() const { return ai_patterns.blanked_four_moves; }
     const vector<Move>& getAIOpenThreeMoves() const { return ai_patterns.open_three_moves; }
     const vector<Move>& getAIBlankedOpenThreeMoves() const { return ai_patterns.blanked_open_three_moves; }
     const vector<Move>& getAICloseThreeMoves() const { return ai_patterns.close_three_moves; }
     const vector<Move>& getAIBlankedCloseThreeMoves() const { return ai_patterns.blanked_close_three_moves; }
     const vector<Move>& getAIOpenTwoMoves() const { return ai_patterns.open_two_moves; }
+    const vector<Move>& getAIDoubleBlankedOpenThreeMoves() const { return ai_patterns.double_blanked_open_three_moves; }
+    const vector<Move>& getAIDoubleBlankedCloseThreeMoves() const { return ai_patterns.double_blanked_close_three_moves; }
     const vector<Move>& getAICloseTwoMoves() const { return ai_patterns.close_two_moves; }
     const vector<Move>& getAIBlankedOpenTwoMoves() const { return ai_patterns.blanked_open_two_moves; }
+    const vector<Move>& getAIBlankedCloseTwoMoves() const { return ai_patterns.blanked_close_two_moves; }
     const vector<Move>& getAIDoubleBlankedOpenTwoMoves() const { return ai_patterns.double_blanked_open_two_moves; }
 
     // Get Opponent Moves
@@ -221,13 +232,17 @@ public:
     const vector<Move>& getOpponentOpenFourMoves() const { return opponent_patterns.open_four_moves; }
     const vector<Move>& getOpponentFourThreeMoves() const { return opponent_patterns.four_three_moves; }
     const vector<Move>& getOpponentCloseFourMoves() const { return opponent_patterns.close_four_moves; }
+    const vector<Move>& getOpponentBlankedFourMoves() const { return opponent_patterns.blanked_four_moves; }
     const vector<Move>& getOpponentOpenThreeMoves() const { return opponent_patterns.open_three_moves; }
     const vector<Move>& getOpponentBlankedOpenThreeMoves() const { return opponent_patterns.blanked_open_three_moves; }
     const vector<Move>& getOpponentCloseThreeMoves() const { return opponent_patterns.close_three_moves; }
     const vector<Move>& getOpponentBlankedCloseThreeMoves() const { return opponent_patterns.blanked_close_three_moves; }
     const vector<Move>& getOpponentOpenTwoMoves() const { return opponent_patterns.open_two_moves; }
+    const vector<Move>& getOpponentDoubleBlankedOpenThreeMoves() const { return opponent_patterns.double_blanked_open_three_moves; }
+    const vector<Move>& getOpponentDoubleBlankedCloseThreeMoves() const { return opponent_patterns.double_blanked_close_three_moves; }
     const vector<Move>& getOpponentCloseTwoMoves() const { return opponent_patterns.close_two_moves; }
     const vector<Move>& getOpponentBlankedOpenTwoMoves() const { return opponent_patterns.blanked_open_two_moves; }
+    const vector<Move>& getOpponentBlankedCloseTwoMoves() const { return opponent_patterns.blanked_close_two_moves; }
     const vector<Move>& getOpponentDoubleBlankedOpenTwoMoves() const { return opponent_patterns.double_blanked_open_two_moves; }
 };
 
@@ -310,9 +325,374 @@ int minimax(Node* node, Board& board, int depth, bool ismy_turn, StoneType ai_st
         return min_eval;
     }
 }
-int static_eval_func(Board& board, StoneType ai_stone_type)
+int static_eval_func(const Board& board, StoneType ai_stone_type)
 {
+    StoneType opponent = (ai_stone_type == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
+    int my_eval{}, opponent_eval{};
 
+    for (int checking_order = 0; checking_order < 4; ++checking_order) {
+        if (0 == checking_order) {
+            for (int r = 0; r < Board::SIZE; ++r) {
+                std::vector<StoneType> line = extract_horizontal_line(board, r);
+                my_eval += analyze_patterns_in_line(line, ai_stone_type);
+                opponent_eval += analyze_patterns_in_line(line, opponent);
+            }
+        }
+        else if (1 == checking_order) {
+            for (int c = 0; c < Board::SIZE; ++c) {
+                std::vector<StoneType> line = extract_vertical_line(board, c);
+                my_eval += analyze_patterns_in_line(line, ai_stone_type);
+                opponent_eval += analyze_patterns_in_line(line, opponent);
+            }
+        }
+        else if (2 == checking_order) {
+            for (int k = -(Board::SIZE - 5); k <= (Board::SIZE - 5); ++k) {
+                std::vector<StoneType> line = extract_diagonal_main(board, k);
+                my_eval += analyze_patterns_in_line(line, ai_stone_type);
+                opponent_eval += analyze_patterns_in_line(line, opponent);
+            }
+        }
+        else {
+            for (int k = 4; k <= 2 * (Board::SIZE - 1) - 4; ++k) {
+                std::vector<StoneType> line = extract_diagonal_anti(board, k);
+                my_eval += analyze_patterns_in_line(line, ai_stone_type);
+                opponent_eval += analyze_patterns_in_line(line, opponent);
+            }
+        }
+    }
+
+    return my_eval - opponent_eval;
+}
+int analyze_patterns_in_line(vector<StoneType> line, StoneType stone_type)
+{
+    int score{};
+    StoneType empty{ StoneType::EMPTY };
+    StoneType opponent = (stone_type == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
+
+    constexpr int SCORE_FIVE = 100'000'000;
+    constexpr int SCORE_OPEN_FOUR = 1'000'000;
+    constexpr int SCORE_BLOCKED_FOUR = 100'000;
+    constexpr int SCORE_BLANKED_FOUR = 100'000;        // new
+    constexpr int SCORE_OPEN_THREE = 10'000;
+    constexpr int SCORE_BLANKED_OPEN_THREE = 5'000;
+    constexpr int SCORE_BLOCKED_THREE = 1'000;
+    constexpr int SCORE_BLANKED_BLOCK_THREE = 500;
+    constexpr int SCORE_OPEN_TWO = 100;
+    constexpr int SCORE_BLANKED_TWO = 80;
+    constexpr int SCORE_DOUBLE_BLANKED_OPEN_THREE = 50;
+    constexpr int SCORE_DOUBLE_BLANKED_BLOCK_THREE = 25;
+    constexpr int SCORE_BLOCKED_TWO = 10;
+    constexpr int SCORE_BLANKED_BLOCK_TWO = 5;
+    constexpr int SCORE_DOUBLE_BLANKED_TWO = 5;              // new
+
+    for (int i = 0; i <= (int)line.size(); ++i) {
+        // 1. --- 5목 체크: ...XXXXX... ---
+        if (i <= (int)line.size() - 5) {
+            if (line[i] == stone_type &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == stone_type && line[i + 4] == stone_type) {
+                score += SCORE_FIVE;
+                i += 4;
+                continue;
+            }
+        }
+
+        // 2. --- 열린 4목 체크: ..._XXXX_... ---
+        if (i <= (int)line.size() - 6) {
+            if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == stone_type && line[i + 4] == stone_type &&
+                line[i + 5] == empty) {
+                score += SCORE_OPEN_FOUR;
+                i += 5;
+                continue;
+            }
+        }
+
+        // 3. --- 막힌 4목 체크: ...BXXXX_... | ..._XXXXB... /  ... ---
+        if (i <= (int)line.size() - 6) {
+            if (isBlocker(line[i], opponent) &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == stone_type && line[i + 4] == stone_type &&
+                line[i + 5] == empty) {
+                score += SCORE_BLOCKED_FOUR;
+                i += 5;
+                continue;
+            }
+            else if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == stone_type && line[i + 4] == stone_type &&
+                isBlocker(line[i + 5], opponent)) {
+                score += SCORE_BLOCKED_FOUR;
+                i += 5;
+                continue;
+            }
+        }
+
+        // 4. --- 한 칸 띈 4목 체크: ...X_XXX... | ...XX_XX... | ...XXX_X... ---
+        if (i <= (int)line.size() - 5) {
+            if (line[i] == stone_type &&
+                line[i + 1] == empty && line[i + 2] == stone_type &&
+                line[i + 3] == stone_type && line[i + 4] == stone_type) {
+                score += SCORE_BLANKED_FOUR;
+                i += 4;
+                continue;
+            }
+            else if (line[i] == stone_type &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == stone_type && line[i + 4] == stone_type) {
+                score += SCORE_BLANKED_FOUR;
+                i += 4;
+                continue;
+            }
+            else if (line[i] == stone_type &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == empty && line[i + 4] == stone_type) {
+                score += SCORE_BLANKED_FOUR;
+                i += 4;
+                continue;
+            }
+        }
+
+        // 5. --- 열린 3목 체크: ..._XXX_... ---
+        if (i <= (int)line.size() - 5) {
+            if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == stone_type && line[i + 4] == empty) {
+                score += SCORE_OPEN_THREE;
+                i += 4;
+                continue;
+            }
+        }
+
+        // 6. --- 한 칸 띈 열린 3목 체크: ..._X_XX_... | ..._XX_X_... ---
+        if (i <= (int)line.size() - 6) {
+            if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == stone_type && line[i + 4] == stone_type &&
+                line[i + 5] == empty) {
+                score += SCORE_BLANKED_OPEN_THREE;
+                i += 5;
+                continue;
+            }
+            else if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == empty && line[i + 4] == stone_type &&
+                line[i + 5] == empty) {
+                score += SCORE_BLANKED_OPEN_THREE;
+                i += 5;
+                continue;
+            }
+        }
+
+        // 7. --- 막힌 3목 체크 : ...BXXX_... | ..._XXXB... ---
+        if (i <= (int)line.size() - 5) {
+            if (isBlocker(line[i], opponent) &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == stone_type && line[i + 4] == empty) {
+                score += SCORE_BLOCKED_THREE;
+                i += 4;
+                continue;
+            }
+            else if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == stone_type && isBlocker(line[i + 4], opponent)) {
+                score += SCORE_BLOCKED_THREE;
+                i += 4;
+                continue;
+            }
+        }
+
+        // 8. --- 막힌 한 칸 띈 3목 체크 : ...BX_XX_... | ...BXX_X_... | ..._X_XXB... | ..._XX_XB... ---
+        if (i <= (int)line.size() - 6) {
+            if (isBlocker(line[i], opponent) &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == stone_type && line[i + 4] == stone_type &&
+                line[i + 5] == empty) {
+                score += SCORE_BLANKED_BLOCK_THREE;
+                i += 5;
+                continue;
+            }
+            else if (isBlocker(line[i], opponent) &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == empty && line[i + 4] == stone_type &&
+                line[i + 5] == empty) {
+                score += SCORE_BLANKED_BLOCK_THREE;
+                i += 5;
+                continue;
+            }
+            else if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == stone_type && line[i + 4] == stone_type &&
+                isBlocker(line[i + 5], opponent)) {
+                score += SCORE_BLANKED_BLOCK_THREE;
+                i += 5;
+                continue;
+            }
+            else if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == empty && line[i + 4] == stone_type &&
+                isBlocker(line[i + 5], opponent)) {
+                score += SCORE_BLANKED_BLOCK_THREE;
+                i += 5;
+                continue;
+            }
+        }
+
+        // 9. --- 열린 2목 체크: ..._XX_... ---
+        if (i <= (int)line.size() - 4) {
+            if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == empty) {
+                score += SCORE_OPEN_TWO;
+                i += 3;
+                continue;
+            }
+        }
+
+        //****
+        // 10. --- 두 칸 띈 열린 3목 체크: ..._X_X_X_... ---
+        if (i <= (int)line.size() - 7) {
+            if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == stone_type && line[i + 4] == empty &&
+                line[i + 5] == stone_type && line[i + 6] == empty) {
+                score += SCORE_DOUBLE_BLANKED_OPEN_THREE;
+                i += 6;
+                continue;
+            }
+        }
+
+        // 11. --- 두 칸 띈 막힌 3목 체크: ...BX_X_X_... | ..._X_X_XB...
+        if (i <= (int)line.size() - 7) {
+            if (isBlocker(line[i], opponent) &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == stone_type && line[i + 4] == empty &&
+                line[i + 5] == stone_type && line[i + 6] == empty) {
+                score += SCORE_DOUBLE_BLANKED_BLOCK_THREE;
+                i += 6;
+                continue;
+            }
+            else if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == stone_type && line[i + 4] == empty &&
+                line[i + 5] == stone_type && isBlocker(line[i + 6], opponent)) {
+                score += SCORE_DOUBLE_BLANKED_BLOCK_THREE;
+                i += 6;
+                continue;
+            }
+        }
+
+        // 12. --- 막힌 2목 체크: ...BXX_... | ..._XXB... ---
+        if (i <= (int)line.size() - 4) {
+            if (isBlocker(line[i], opponent) &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                line[i + 3] == empty) {
+                score += SCORE_BLOCKED_TWO;
+                i += 3;
+                continue;
+            }
+            else if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == stone_type &&
+                isBlocker(line[i + 3], opponent)) {
+                score += SCORE_BLOCKED_TWO;
+                i += 3;
+                continue;
+            }
+        }
+
+        // 13. --- 한 칸 띈 2목 체크: ..._X_X_... ---
+        if (i <= (int)line.size() - 5) {
+            if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == stone_type && line[i + 4] == empty) {
+                score += SCORE_BLANKED_TWO;
+                i += 4;
+                continue;
+            }
+        }
+
+        // 14. --- 두 칸 띈 2목 체크: ..._X__X_... ---
+        if (i <= (int)line.size() - 6) {
+            if (line[i] == empty &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == empty && line[i + 4] == stone_type &&
+                line[i + 5] == empty) {
+                score += SCORE_DOUBLE_BLANKED_TWO;
+                i += 5;
+                continue;
+            }
+        }
+
+        // 15. --- 막힌 한 칸 띈 2목 체크: ...BX_X_... | ..._X_XB... ---
+        if (i <= (int)line.size() - 5) {
+            if (isBlocker(line[i], opponent) &&
+                line[i + 1] == stone_type && line[i + 2] == empty &&
+                line[i + 3] == stone_type && line[i + 4] == empty) {
+                score += SCORE_BLANKED_BLOCK_TWO;
+                i += 4;
+                continue;
+            }
+            else if (line[i] == empty &&
+                line[i + 1] == empty && line[i + 2] == stone_type &&
+                line[i + 3] == stone_type && isBlocker(line[i + 4], opponent)) {
+                score += SCORE_BLANKED_BLOCK_TWO;
+                i += 4;
+                continue;
+            }
+        }
+    }
+
+    return score;
+}
+vector<StoneType> extract_horizontal_line(const Board& board, int row)
+{
+    vector<StoneType> line;
+    line.reserve(Board::SIZE); // 메모리 미리 할당
+
+    for (int c = 0; c < Board::SIZE; ++c) {
+        line.push_back(board.getStone(row, c));
+    }
+    return line;
+}
+vector<StoneType> extract_vertical_line(const Board& board, int col)
+{
+    vector<StoneType> line;
+    line.reserve(Board::SIZE);
+
+    for (int r = 0; r < Board::SIZE; ++r) {
+        line.push_back(board.getStone(r, col));
+    }
+    return line;
+}
+vector<StoneType> extract_diagonal_main(const Board& board, int k)
+{
+    vector<StoneType> line;
+    line.reserve(Board::SIZE);
+
+    // 라인을 왼쪽 위에서 오른쪽 아래 방향으로 일관되게 추출
+    for (int c = 0; c < Board::SIZE; ++c) {
+        int r = k + c;
+        if (board.isOnBoard(r, c)) {
+            line.push_back(board.getStone(r, c));
+        }
+    }
+    return line;
+}
+vector<StoneType> extract_diagonal_anti(const Board& board, int k)
+{
+    vector<StoneType> line;
+    line.reserve(Board::SIZE);
+
+    // 라인을 위쪽에서 아래쪽 방향으로 일관되게 추출
+    int r_start = std::max(0, k - (Board::SIZE - 1));
+    int r_end = std::min(Board::SIZE - 1, k);
+
+    for (int r = r_start; r <= r_end; ++r) {
+        int c = k - r;
+        line.push_back(board.getStone(r, c));
+    }
+    return line;
 }
 vector<Move> generate_children_pattern_based(const Board& board, StoneType ai_player) {
     PatternAnalyzer analyzer;
@@ -394,7 +774,7 @@ void Node::generate_children(const Board& current_board, StoneType player_to_mov
     // 3. 최종 후보 수 목록 처리
 
     // 만약 위에서 유의미한 후보 수를 하나도 찾지 못했다면,
-    // 주변부 탐색으로 기본적인 후보 수를 생성합니다.
+    // 주변부 탐색으로 기본적인 후보 수를 생성
     if (candidate_moves.empty()) {
         candidate_moves = generate_neighborhood_moves(current_board);
     }
@@ -437,7 +817,7 @@ void PatternAnalyzer::analyze(const Board& board, StoneType ai_player) {
         }
     }
 }
-// analyzeLine 함수: 특정 라인을 9칸짜리 벡터로 추출
+// - analyzeLine 함수: 특정 라인을 9칸짜리 벡터로 추출
 void PatternAnalyzer::analyzeLine(const Board& board, int r, int c, int dy, int dx, StoneType player, PlayerPatterns& patterns) {
     vector<StoneType> segment;
     segment.reserve(9);
@@ -463,7 +843,7 @@ void PatternAnalyzer::analyzeLine(const Board& board, int r, int c, int dy, int 
 inline bool isBlocker(StoneType stone_to_check, StoneType opponent_player) {
     return stone_to_check == opponent_player || stone_to_check == StoneType::WALL;
 }
-// findPatternsInSegment 함수: 추출된 벡터에서 패턴을 찾아내는 핵심 로직
+// - findPatternsInSegment 함수: 추출된 벡터에서 패턴을 찾아내는 핵심 로직
 void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, int r, int c, StoneType player, PlayerPatterns& patterns) {
     // segment의 크기는 9, 방금 놓은 돌은 항상 중앙인 인덱스 4에 위치함.
     StoneType opponent = (player == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
@@ -498,7 +878,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
 
     // 3. --- 막힌 4목 체크: ...BXXXX_... | ..._XXXXB... ---
     // 9칸 세그먼트 안에서 6목이 되는 모든 경우를 확인
-    for (int i = 0; i <= 9 - 5; ++i) {
+    for (int i = 0; i <= 9 - 6; ++i) {
         if (i <= 4 && i + 5 >= 4) {
             if (isBlocker(segment[i], opponent) &&
                 segment[i + 1] == player && segment[i + 2] == player &&
@@ -515,7 +895,29 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
         }
     }
 
-    // 4. --- 열린 3목 체크: ..._XXX_... ---
+    // 4. --- 한 칸 띈 4목 체크: ...X_XXX... | ...XX_XX... | ...XXX_X... ---
+    // 9칸 세그먼트 안에서 5목이 되는 모든 경우를 확인
+    for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 4 >= 4) {
+            if (segment[i] == player &&
+                segment[i + 1] == empty && segment[i + 2] == player &&
+                segment[i + 3] == player && segment[i + 4] == player) {
+                patterns.blanked_four_moves.push_back(Move(r, c));
+            }
+            else if (segment[i] == player &&
+                segment[i + 1] == player && segment[i + 2] == empty &&
+                segment[i + 3] == player && segment[i + 4] == player) {
+                patterns.blanked_four_moves.push_back(Move(r, c));
+            }
+            else if (segment[i] == player &&
+                segment[i + 1] == player && segment[i + 2] == player &&
+                segment[i + 3] == empty && segment[i + 4] == player) {
+                patterns.blanked_four_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 5. --- 열린 3목 체크: ..._XXX_... ---
     // 9칸 세그먼트 안에서 창문 크기 5인 _XXX_ 패턴을 확인
     for (int i = 0; i <= 9 - 5; ++i) {
         if (i <= 4 && i + 4 >= 4) { // 패턴이 중앙의 돌을 포함하는지
@@ -527,9 +929,9 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
         }
     }
 
-    // 5. --- 한 칸 띈 열린 3목 체크: ..._X_XX_... | ..._XX_X_... ---
+    // 6. --- 한 칸 띈 열린 3목 체크: ..._X_XX_... | ..._XX_X_... ---
     // 9칸 세그먼트 안에서 창문 크기 6인 _XXX_ 패턴을 확인
-    for (int i = 0; i <= 9 - 5; ++i) {
+    for (int i = 0; i <= 9 - 6; ++i) {
         if (i <= 4 && i + 5 >= 4) { // 패턴이 중앙의 돌을 포함하는지
             if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == empty &&
@@ -546,7 +948,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
         }
     }
 
-    // 6. --- 막힌 3목 체크 : ...BXXX_... | ..._XXXB... ---
+    // 7. --- 막힌 3목 체크 : ...BXXX_... | ..._XXXB... ---
     // 9칸 세그먼트 안에서 창문 크기 5인 _XXX_ 패턴을 확인
     for (int i = 0; i <= 9 - 5; ++i) {
         if (i <= 4 && i + 4 >= 4) { // 패턴이 중앙의 돌을 포함하는지
@@ -563,9 +965,9 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
         }
     }
 
-    // 7. --- 막힌 한 칸 띈 3목 체크 : ...BX_XX_... | ...BXX_X_... | ..._X_XXB... | ..._XX_XB... ---
+    // 8. --- 막힌 한 칸 띈 3목 체크 : ...BX_XX_... | ...BXX_X_... | ..._X_XXB... | ..._XX_XB... ---
     // 9칸 세그먼트 안에서 창문 크기 6인 _XXX_ 패턴을 확인
-    for (int i = 0; i <= 9 - 5; ++i) {
+    for (int i = 0; i <= 9 - 6; ++i) {
         if (i <= 4 && i + 5 >= 4) { // 패턴이 중앙의 돌을 포함하는지
             if (isBlocker(segment[i], opponent) &&
                 segment[i + 1] == player && segment[i + 2] == empty &&
@@ -594,9 +996,9 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
         }
     }
 
-    // 8. --- 열린 2목 체크: ..._XX_... ---
+    // 9. --- 열린 2목 체크: ..._XX_... ---
     // 9칸 세그먼트 안에서 창문 크기 4인 _XXX_ 패턴을 확인
-    for (int i = 0; i <= 9 - 5; ++i) {
+    for (int i = 0; i <= 9 - 4; ++i) {
         if (i <= 4 && i + 3 >= 4) { // 패턴이 중앙의 돌을 포함하는지
             if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == player &&
@@ -606,9 +1008,9 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
         }
     }
 
-    // 9. --- 두 칸 띈 열린 3목 체크: ..._X_X_X_... ---
+    // 10. --- 두 칸 띈 열린 3목 체크: ..._X_X_X_... ---
     // 9칸 세그먼트 안에서 창문 크기 7인 _XXX_ 패턴을 확인
-    for (int i = 0; i <= 9 - 5; ++i) {
+    for (int i = 0; i <= 9 - 7; ++i) {
         if (i <= 4 && i + 6 >= 4) { // 패턴이 중앙의 돌을 포함하는지
             if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == empty &&
@@ -619,9 +1021,9 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
         }
     }
 
-    // 10. --- 막힌 2목 체크: ...BXX_... | ..._XXB... ---
+    // 11. --- 막힌 2목 체크: ...BXX_... | ..._XXB... ---
     // 9칸 세그먼트 안에서 창문 크기 4인 _XXX_ 패턴을 확인
-    for (int i = 0; i <= 9 - 5; ++i) {
+    for (int i = 0; i <= 9 - 4; ++i) {
         if (i <= 4 && i + 3 >= 4) { // 패턴이 중앙의 돌을 포함하는지
             if (isBlocker(segment[i], opponent) &&
                 segment[i + 1] == player && segment[i + 2] == player &&
@@ -636,7 +1038,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
         }
     }
 
-    // 11. --- 한 칸 띈 2목 체크: ..._X_X_... ---
+    // 12. --- 한 칸 띈 열린 2목 체크: ..._X_X_... ---
     // 9칸 세그먼트 안에서 창문 크기 5인 _XXX_ 패턴을 확인
     for (int i = 0; i <= 9 - 5; ++i) {
         if (i <= 4 && i + 4 >= 4) { // 패턴이 중앙의 돌을 포함하는지
@@ -648,9 +1050,26 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
         }
     }
 
-    // 12. --- 두 칸 띈 2목 체크: ..._X__X_... ---
-    // 9칸 세그먼트 안에서 창문 크기 6인 _XXX_ 패턴을 확인
+    // 13. --- 한 칸 띈 막힌 2목 체크: ...BX_X_... | ..._X_XB...
+    // 9칸 세그먼트 안에서 창문 크기 5인 ...BX_X_... | ..._X_XB... 패턴을 확인
     for (int i = 0; i <= 9 - 5; ++i) {
+        if (i <= 4 && i + 4 >= 4) { // 패턴이 중앙의 돌을 포함하는지
+            if (isBlocker(segment[i], opponent) &&
+                segment[i + 1] == player && segment[i + 2] == empty &&
+                segment[i + 3] == player && segment[i + 4] == empty) {
+                patterns.blanked_close_two_moves.push_back(Move(r, c));
+            }
+            else if (segment[i] == empty &&
+                segment[i + 1] == player && segment[i + 2] == empty &&
+                segment[i + 3] == player && isBlocker(segment[i + 4], opponent)) {
+                patterns.blanked_close_two_moves.push_back(Move(r, c));
+            }
+        }
+    }
+
+    // 14. --- 두 칸 띈 2목 체크: ..._X__X_... ---
+    // 9칸 세그먼트 안에서 창문 크기 6인 _XXX_ 패턴을 확인
+    for (int i = 0; i <= 9 - 6; ++i) {
         if (i <= 4 && i + 5 >= 4) { // 패턴이 중앙의 돌을 포함하는지
             if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == empty &&
@@ -685,7 +1104,7 @@ vector<Move> generate_neighborhood_moves(const Board& board) {
     }
 
     // set에 저장된 후보들을 vector로 변환하여 반환
-    return std::vector<Move>(candidate_set.begin(), candidate_set.end());
+    return vector<Move>(candidate_set.begin(), candidate_set.end());
 }
 // Board 멤버 함수
 StoneType Board::checkForWin(const Move& last_move) const {
