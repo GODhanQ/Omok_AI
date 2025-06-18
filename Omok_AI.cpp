@@ -14,6 +14,27 @@ constexpr int WHITE_2024180014{ 2 };
 constexpr int EMPTY_2024180014{ 0 };
 constexpr int Board_Size_2024180014{ 19 };
 
+enum class Pattern {
+    NONE,
+    OPEN_THREE,
+    CLOSED_THREE,
+    GAPPED_OPEN_THREE, // _X_XX_ 와 같은 패턴
+    DOUBLE_BLANKED_OPEN_THREE, // _X_X_X_ 와 같은 패턴
+    OPEN_FOUR,
+    CLOSED_FOUR,
+    FIVE
+};
+enum class LineType {
+    DONTCARE,       // 상관없음
+    HORIZONTAL,     // 가로
+    VERTICAL,       // 세로
+    DIAGONAL_MAIN,  // 대각선 \'
+    DIAGONAL_ANTI   // 대각선 /'
+};
+struct PatternInfo {
+    Move move;
+    LineType line;
+};
 enum class StoneType {
     EMPTY,
     BLACK,
@@ -159,22 +180,23 @@ public:
 };
 struct PlayerPatterns {
     // 우선순위 나열
-    vector<Move> win_moves;                         // 1. ...XXXXX...
-    vector<Move> open_four_moves;                   // 2. ..._XXXX_...
-    vector<Move> four_three_moves;                  // 사삼(4-3)을 만드는 위치
-    vector<Move> close_four_moves;                  // 3. ...BXXXX_... | ..._XXXXB...
-    vector<Move> blanked_four_moves;                // 4. ...X_XXX... | ...XX_XX... | ...XXX_X...
-    vector<Move> open_three_moves;                  // 5. ..._XXX_...
-    vector<Move> blanked_open_three_moves;          // 6. ..._X_XX_... | ..._XX_X_...
-    vector<Move> close_three_moves;                 // 7. ...BXXX_... | ..._XXXB...
-    vector<Move> blanked_close_three_moves;         // 8. ...BX_XX_... | ...BXX_X_... | ..._X_XXB... | ..._XX_XB...
-    vector<Move> open_two_moves;                    // 9. ..._XX_...
-    vector<Move> double_blanked_open_three_moves;   // 10. ..._X_X_X_...
-    vector<Move> double_blanked_close_three_moves;  // 11. ...BX_X_X_... | ..._X_X_XB...
-    vector<Move> close_two_moves;                   // 12. ...BXX_... | ..._XXB...
-    vector<Move> blanked_open_two_moves;            // 13. ..._X_X_...
-    vector<Move> blanked_close_two_moves;           // 14. ...BX_X_... | ..._X_XB...
-    vector<Move> double_blanked_open_two_moves;     // 15. ..._X__X_...
+    vector<PatternInfo> win_moves;                         // 1. ...XXXXX...
+    vector<PatternInfo> open_four_moves;                   // 2. ..._XXXX_...
+    vector<PatternInfo> four_three_moves;                  // 사삼(4-3)을 만드는 위치
+    vector<PatternInfo> close_four_moves;                  // 3. ...BXXXX_... | ..._XXXXB...
+    vector<PatternInfo> blanked_four_moves;                // 4. ...X_XXX... | ...XX_XX... | ...XXX_X...
+    vector<PatternInfo> open_three_moves;                  // 5. ..._XXX_...
+    vector<PatternInfo> blanked_open_three_moves;          // 6. ..._X_XX_... | ..._XX_X_...
+    vector<PatternInfo> close_three_moves;                 // 7. ...BXXX_... | ..._XXXB...
+    vector<PatternInfo> blanked_close_three_moves;         // 8. ...BX_XX_... | ...BXX_X_... | ..._X_XXB... | ..._XX_XB...
+    vector<PatternInfo> open_two_moves;                    // 9. ..._XX_...
+    vector<PatternInfo> double_blanked_open_three_moves;   // 10. ..._X_X_X_...
+    vector<PatternInfo> double_blanked_close_three_moves;  // 11. ...BX_X_X_... | ..._X_X_XB...
+    vector<PatternInfo> close_two_moves;                   // 12. ...BXX_... | ..._XXB...
+    vector<PatternInfo> blanked_open_two_moves;            // 13. ..._X_X_...
+    vector<PatternInfo> blanked_close_two_moves;           // 14. ...BX_X_... | ..._X_XB...
+    vector<PatternInfo> double_blanked_open_two_moves;     // 15. ..._X__X_...
+    vector<PatternInfo> forbidden_spot;                    // 금수 자리
 
     void clear() {
         win_moves.clear();
@@ -193,6 +215,7 @@ struct PlayerPatterns {
         blanked_open_two_moves.clear();
         blanked_close_two_moves.clear();
         double_blanked_open_two_moves.clear();
+        forbidden_spot.clear();
     }
 };
 class PatternAnalyzer {
@@ -202,7 +225,7 @@ private:
 
     void checkPatternsAfterMove(const Board& board, int r, int c, StoneType player, PlayerPatterns& patterns);
     void analyzeLine(const Board& board, int r, int c, int dy, int dx, StoneType player, PlayerPatterns& patterns);
-    void findPatternsInSegment(const vector<StoneType>& segment, int r, int c, StoneType player, PlayerPatterns& patterns);
+    void findPatternsInSegment(const vector<StoneType>& segment, int r, int c, int dy, int dx, StoneType player, PlayerPatterns& patterns);
 
 public:
     PatternAnalyzer() = default;
@@ -210,40 +233,42 @@ public:
     void analyze(const Board& board, StoneType ai_player);
     
     // Get AI Moves
-    const vector<Move>& getAIWinMoves() const { return ai_patterns.win_moves; }
-    const vector<Move>& getAIOpenFourMoves() const { return ai_patterns.open_four_moves; }
-    const vector<Move>& getAIFourThreeMoves() const { return ai_patterns.four_three_moves; }
-    const vector<Move>& getAICloseFourMoves() const { return ai_patterns.close_four_moves; }
-    const vector<Move>& getAIBlankedFourMoves() const { return ai_patterns.blanked_four_moves; }
-    const vector<Move>& getAIOpenThreeMoves() const { return ai_patterns.open_three_moves; }
-    const vector<Move>& getAIBlankedOpenThreeMoves() const { return ai_patterns.blanked_open_three_moves; }
-    const vector<Move>& getAICloseThreeMoves() const { return ai_patterns.close_three_moves; }
-    const vector<Move>& getAIBlankedCloseThreeMoves() const { return ai_patterns.blanked_close_three_moves; }
-    const vector<Move>& getAIOpenTwoMoves() const { return ai_patterns.open_two_moves; }
-    const vector<Move>& getAIDoubleBlankedOpenThreeMoves() const { return ai_patterns.double_blanked_open_three_moves; }
-    const vector<Move>& getAIDoubleBlankedCloseThreeMoves() const { return ai_patterns.double_blanked_close_three_moves; }
-    const vector<Move>& getAICloseTwoMoves() const { return ai_patterns.close_two_moves; }
-    const vector<Move>& getAIBlankedOpenTwoMoves() const { return ai_patterns.blanked_open_two_moves; }
-    const vector<Move>& getAIBlankedCloseTwoMoves() const { return ai_patterns.blanked_close_two_moves; }
-    const vector<Move>& getAIDoubleBlankedOpenTwoMoves() const { return ai_patterns.double_blanked_open_two_moves; }
+    const vector<PatternInfo>& getAIWinMoves() const { return ai_patterns.win_moves; }
+    const vector<PatternInfo>& getAIOpenFourMoves() const { return ai_patterns.open_four_moves; }
+    const vector<PatternInfo>& getAIFourThreeMoves() const { return ai_patterns.four_three_moves; }
+    const vector<PatternInfo>& getAICloseFourMoves() const { return ai_patterns.close_four_moves; }
+    const vector<PatternInfo>& getAIBlankedFourMoves() const { return ai_patterns.blanked_four_moves; }
+    const vector<PatternInfo>& getAIOpenThreeMoves() const { return ai_patterns.open_three_moves; }
+    const vector<PatternInfo>& getAIBlankedOpenThreeMoves() const { return ai_patterns.blanked_open_three_moves; }
+    const vector<PatternInfo>& getAICloseThreeMoves() const { return ai_patterns.close_three_moves; }
+    const vector<PatternInfo>& getAIBlankedCloseThreeMoves() const { return ai_patterns.blanked_close_three_moves; }
+    const vector<PatternInfo>& getAIOpenTwoMoves() const { return ai_patterns.open_two_moves; }
+    const vector<PatternInfo>& getAIDoubleBlankedOpenThreeMoves() const { return ai_patterns.double_blanked_open_three_moves; }
+    const vector<PatternInfo>& getAIDoubleBlankedCloseThreeMoves() const { return ai_patterns.double_blanked_close_three_moves; }
+    const vector<PatternInfo>& getAICloseTwoMoves() const { return ai_patterns.close_two_moves; }
+    const vector<PatternInfo>& getAIBlankedOpenTwoMoves() const { return ai_patterns.blanked_open_two_moves; }
+    const vector<PatternInfo>& getAIBlankedCloseTwoMoves() const { return ai_patterns.blanked_close_two_moves; }
+    const vector<PatternInfo>& getAIDoubleBlankedOpenTwoMoves() const { return ai_patterns.double_blanked_open_two_moves; }
+    const vector<PatternInfo>& getAIForbiddenSpot() const { return ai_patterns.forbidden_spot; }
 
     // Get Opponent Moves
-    const vector<Move>& getOpponentWinMoves() const { return opponent_patterns.win_moves; }
-    const vector<Move>& getOpponentOpenFourMoves() const { return opponent_patterns.open_four_moves; }
-    const vector<Move>& getOpponentFourThreeMoves() const { return opponent_patterns.four_three_moves; }
-    const vector<Move>& getOpponentCloseFourMoves() const { return opponent_patterns.close_four_moves; }
-    const vector<Move>& getOpponentBlankedFourMoves() const { return opponent_patterns.blanked_four_moves; }
-    const vector<Move>& getOpponentOpenThreeMoves() const { return opponent_patterns.open_three_moves; }
-    const vector<Move>& getOpponentBlankedOpenThreeMoves() const { return opponent_patterns.blanked_open_three_moves; }
-    const vector<Move>& getOpponentCloseThreeMoves() const { return opponent_patterns.close_three_moves; }
-    const vector<Move>& getOpponentBlankedCloseThreeMoves() const { return opponent_patterns.blanked_close_three_moves; }
-    const vector<Move>& getOpponentOpenTwoMoves() const { return opponent_patterns.open_two_moves; }
-    const vector<Move>& getOpponentDoubleBlankedOpenThreeMoves() const { return opponent_patterns.double_blanked_open_three_moves; }
-    const vector<Move>& getOpponentDoubleBlankedCloseThreeMoves() const { return opponent_patterns.double_blanked_close_three_moves; }
-    const vector<Move>& getOpponentCloseTwoMoves() const { return opponent_patterns.close_two_moves; }
-    const vector<Move>& getOpponentBlankedOpenTwoMoves() const { return opponent_patterns.blanked_open_two_moves; }
-    const vector<Move>& getOpponentBlankedCloseTwoMoves() const { return opponent_patterns.blanked_close_two_moves; }
-    const vector<Move>& getOpponentDoubleBlankedOpenTwoMoves() const { return opponent_patterns.double_blanked_open_two_moves; }
+    const vector<PatternInfo>& getOpponentWinMoves() const { return opponent_patterns.win_moves; }
+    const vector<PatternInfo>& getOpponentOpenFourMoves() const { return opponent_patterns.open_four_moves; }
+    const vector<PatternInfo>& getOpponentFourThreeMoves() const { return opponent_patterns.four_three_moves; }
+    const vector<PatternInfo>& getOpponentCloseFourMoves() const { return opponent_patterns.close_four_moves; }
+    const vector<PatternInfo>& getOpponentBlankedFourMoves() const { return opponent_patterns.blanked_four_moves; }
+    const vector<PatternInfo>& getOpponentOpenThreeMoves() const { return opponent_patterns.open_three_moves; }
+    const vector<PatternInfo>& getOpponentBlankedOpenThreeMoves() const { return opponent_patterns.blanked_open_three_moves; }
+    const vector<PatternInfo>& getOpponentCloseThreeMoves() const { return opponent_patterns.close_three_moves; }
+    const vector<PatternInfo>& getOpponentBlankedCloseThreeMoves() const { return opponent_patterns.blanked_close_three_moves; }
+    const vector<PatternInfo>& getOpponentOpenTwoMoves() const { return opponent_patterns.open_two_moves; }
+    const vector<PatternInfo>& getOpponentDoubleBlankedOpenThreeMoves() const { return opponent_patterns.double_blanked_open_three_moves; }
+    const vector<PatternInfo>& getOpponentDoubleBlankedCloseThreeMoves() const { return opponent_patterns.double_blanked_close_three_moves; }
+    const vector<PatternInfo>& getOpponentCloseTwoMoves() const { return opponent_patterns.close_two_moves; }
+    const vector<PatternInfo>& getOpponentBlankedOpenTwoMoves() const { return opponent_patterns.blanked_open_two_moves; }
+    const vector<PatternInfo>& getOpponentBlankedCloseTwoMoves() const { return opponent_patterns.blanked_close_two_moves; }
+    const vector<PatternInfo>& getOpponentDoubleBlankedOpenTwoMoves() const { return opponent_patterns.double_blanked_open_two_moves; }
+    const vector<PatternInfo>& getOpponentForbiddenSpot() const { return opponent_patterns.forbidden_spot; }
 };
 
 Board board_2024180014;
@@ -329,32 +354,35 @@ int static_eval_func(const Board& board, StoneType ai_stone_type)
 {
     StoneType opponent = (ai_stone_type == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
     int my_eval{}, opponent_eval{};
+    vector<pair<int, int>> checkForFourThree;
+    // 열린 3목 & 한 칸 띈 열린 3목 : 3-3 임시 정의
+    // 상관없이 4목 & 4목 : 4-4 임시 정의
 
     for (int checking_order = 0; checking_order < 4; ++checking_order) {
         if (0 == checking_order) {
             for (int r = 0; r < Board::SIZE; ++r) {
-                std::vector<StoneType> line = extract_horizontal_line(board, r);
+                vector<StoneType> line = extract_horizontal_line(board, r);
                 my_eval += analyze_patterns_in_line(line, ai_stone_type);
                 opponent_eval += analyze_patterns_in_line(line, opponent);
             }
         }
         else if (1 == checking_order) {
             for (int c = 0; c < Board::SIZE; ++c) {
-                std::vector<StoneType> line = extract_vertical_line(board, c);
+                vector<StoneType> line = extract_vertical_line(board, c);
                 my_eval += analyze_patterns_in_line(line, ai_stone_type);
                 opponent_eval += analyze_patterns_in_line(line, opponent);
             }
         }
         else if (2 == checking_order) {
             for (int k = -(Board::SIZE - 5); k <= (Board::SIZE - 5); ++k) {
-                std::vector<StoneType> line = extract_diagonal_main(board, k);
+                vector<StoneType> line = extract_diagonal_main(board, k);
                 my_eval += analyze_patterns_in_line(line, ai_stone_type);
                 opponent_eval += analyze_patterns_in_line(line, opponent);
             }
         }
         else {
             for (int k = 4; k <= 2 * (Board::SIZE - 1) - 4; ++k) {
-                std::vector<StoneType> line = extract_diagonal_anti(board, k);
+                vector<StoneType> line = extract_diagonal_anti(board, k);
                 my_eval += analyze_patterns_in_line(line, ai_stone_type);
                 opponent_eval += analyze_patterns_in_line(line, opponent);
             }
@@ -698,6 +726,7 @@ vector<Move> generate_children_pattern_based(const Board& board, StoneType ai_pl
     PatternAnalyzer analyzer;
     analyzer.analyze(board, ai_player);
     
+    // 여기도 뭔가 더 해줘야 할거 같고.
     vector<Move> level3_moves; // 나의 필승 패턴 (사삼, 열린 넷)
     vector<Move> level4_moves; // 상대의 필승 패턴 방어
     vector<Move> level5_moves; // 나의 열린 삼
@@ -705,14 +734,24 @@ vector<Move> generate_children_pattern_based(const Board& board, StoneType ai_pl
 
     // level 1
     if (!analyzer.getAIWinMoves().empty()) {
-        return analyzer.getAIWinMoves();
+        vector<PatternInfo> win_moves = analyzer.getAIWinMoves();
+        vector<Move> win_moves_MoveVec;
+        for (const PatternInfo& m : win_moves) {
+            win_moves_MoveVec.push_back(m.move);
+        }
+        return win_moves_MoveVec;
     }
     // level 2
     if (!analyzer.getOpponentWinMoves().empty()) {
-        return analyzer.getOpponentWinMoves();
+        vector<PatternInfo> opponent_win_moves = analyzer.getOpponentWinMoves();
+        vector<Move> opponent_win_moves_MoveVec;
+        for (const PatternInfo& m : opponent_win_moves) {
+            opponent_win_moves_MoveVec.push_back(m.move);
+        }
+        return opponent_win_moves_MoveVec;
     }
 
-    // 3, 4, 5, 6 순위의 수를 조합하여 반환 (더욱 정교한 방식)
+    // 3, 4, 5, 6 순위의 수를 조합하여 반환
     vector<Move> candidates;
     candidates.insert(candidates.end(), level3_moves.begin(), level3_moves.end());
     candidates.insert(candidates.end(), level4_moves.begin(), level4_moves.end());
@@ -734,40 +773,80 @@ vector<Move> generate_children_pattern_based(const Board& board, StoneType ai_pl
 
 // Node 멤버 함수
 void Node::generate_children(const Board& current_board, StoneType player_to_move) {
-    vector<Move> candidates;
-
+    StoneType opponent_player = (player_to_move == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
+    vector<Move> candidate_moves;
     PatternAnalyzer analyzer;
     analyzer.analyze(current_board, player_to_move);
-
-    std::vector<Move> candidate_moves;
-
+    
     // 1순위: 내가 즉시 이기는 수
     const auto& ai_win_moves = analyzer.getAIWinMoves();
+    // vector<PatternInfo> 
     if (!ai_win_moves.empty()) {
-        candidates = ai_win_moves;
+        for (const PatternInfo& p_info : ai_win_moves) {
+            candidate_moves.push_back(p_info.move);
+        }
     }
     // 2순위: 상대가 즉시 이기는 수 (1순위가 없을 경우)
     else {
         const auto& opponent_win_moves = analyzer.getOpponentWinMoves();
         if (!opponent_win_moves.empty()) {
-            candidates = opponent_win_moves;
+            for (const PatternInfo& p_info : opponent_win_moves) {
+                candidate_moves.push_back(p_info.move);
+            }
         }
-        // 3순위 이후: 여러 중요 패턴들을 조합
         else {
-            const auto& ai_unstoppable = analyzer.getAIFourThreeMoves();
-            candidates.insert(candidates.end(), ai_unstoppable.begin(), ai_unstoppable.end());
-            const auto& ai_open_fours = analyzer.getAIOpenFourMoves();
-            candidates.insert(candidates.end(), ai_open_fours.begin(), ai_open_fours.end());
+            const auto& opponent_four_three_moves = analyzer.getOpponentFourThreeMoves();
+            // 🥉 3순위: 내가 '백돌'이고, '사삼'으로 이길 수 있는가?
+            if (player_to_move == StoneType::WHITE) {
+                const auto& ai_four_three_moves = analyzer.getAIFourThreeMoves();
+                if (!ai_four_three_moves.empty()) {
+                    for (const PatternInfo& p_info : ai_four_three_moves) {
+                        candidate_moves.push_back(p_info.move);
+                    }
+                }
+            }
+            // 🏅 4순위: 상대가 '백돌'이고, '사삼'으로 이길 수 있는가? -> 반드시 방어
+            else if (opponent_player == StoneType::WHITE) {
+                const auto& opponent_four_three_moves = analyzer.getOpponentFourThreeMoves();
+                if (!opponent_four_three_moves.empty()) {
+                    for (const PatternInfo& p_info : opponent_four_three_moves) {
+                        candidate_moves.push_back(p_info.move);
+                    }
+                }
+             }
+            // 4순위 이후: 여러 중요 패턴들을 조합
+            // 여기 추가해야함.
+            else {
+                const auto& ai_unstoppable = analyzer.getAIFourThreeMoves();
+                candidate_moves.insert(candidate_moves.end(), ai_unstoppable.begin(), ai_unstoppable.end());
+                const auto& ai_open_fours = analyzer.getAIOpenFourMoves();
+                candidate_moves.insert(candidate_moves.end(), ai_open_fours.begin(), ai_open_fours.end());
 
-            const auto& opponent_unstoppable = analyzer.getOpponentFourThreeMoves();
-            candidates.insert(candidates.end(), opponent_unstoppable.begin(), opponent_unstoppable.end());
-            const auto& opponent_open_fours = analyzer.getOpponentOpenFourMoves();
-            candidates.insert(candidates.end(), opponent_open_fours.begin(), opponent_open_fours.end());
+                const auto& opponent_unstoppable = analyzer.getOpponentFourThreeMoves();
+                candidate_moves.insert(candidate_moves.end(), opponent_unstoppable.begin(), opponent_unstoppable.end());
+                const auto& opponent_open_fours = analyzer.getOpponentOpenFourMoves();
+                candidate_moves.insert(candidate_moves.end(), opponent_open_fours.begin(), opponent_open_fours.end());
 
-            const auto& ai_open_threes = analyzer.getAIOpenThreeMoves();
-            candidates.insert(candidates.end(), ai_open_threes.begin(), ai_open_threes.end());
-            const auto& opponent_open_threes = analyzer.getOpponentOpenThreeMoves();
-            candidates.insert(candidates.end(), opponent_open_threes.begin(), opponent_open_threes.end());
+                const auto& ai_open_threes = analyzer.getAIOpenThreeMoves();
+                candidate_moves.insert(candidate_moves.end(), ai_open_threes.begin(), ai_open_threes.end());
+                const auto& opponent_open_threes = analyzer.getOpponentOpenThreeMoves();
+                candidate_moves.insert(candidate_moves.end(), opponent_open_threes.begin(), opponent_open_threes.end());
+            }
+        }
+    }
+
+    if (player_to_move == StoneType::BLACK) {
+        const auto& forbidden_spots = analyzer.getAIForbiddenSpot(); // 새로운 Getter
+        if (!forbidden_spots.empty()) {
+
+            // candidate_moves에서 forbidden_spots에 포함된 모든 수를 제거
+            candidate_moves.erase(
+                remove_if(candidate_moves.begin(), candidate_moves.end(),
+                    [&](const Move& m) {
+                        // m이 forbidden_spots 안에 있는지 확인
+                        return std::find(forbidden_spots.begin(), forbidden_spots.end(), m) != forbidden_spots.end();
+                    }),
+                candidate_moves.end());
         }
     }
 
@@ -802,8 +881,78 @@ void PatternAnalyzer::checkPatternsAfterMove(const Board& board, int r, int c, S
     analyzeLine(board, r, c, 1, 0, player, patterns);  // 세로 (dy=1, dx=0)
     analyzeLine(board, r, c, 1, 1, player, patterns);  // 대각선 \ (dy=1, dx=1)
     analyzeLine(board, r, c, 1, -1, player, patterns); // 대각선 / (dy=1, dx=-1)
+
+    vector<PatternInfo> temp_fours;
+    vector<PatternInfo> temp_open_threes;
+    bool is_win = false;
+
+    // 가상으로 돌을 놓은 보드 생성
+    Board temp_board = board;
+    temp_board.placeStone(Move(r, c), player);
+
+    // 4개의 방향(축)을 순회
+    const int directions[4][2] = { {0, 1}, {1, 0}, {1, 1}, {1, -1} };
+    const LineType line_types[4] = { LineType::HORIZONTAL, LineType::VERTICAL, LineType::DIAGONAL_MAIN, LineType::DIAGONAL_ANTI };
+
+    for (int i = 0; i < 4; ++i) {
+        vector<StoneType> segment = extractLineSegment(temp_board, r, c, directions[i][0], directions[i][1]);
+        Pattern result = findBestPatternInSegment(segment, player);
+
+        // 분석 결과를 임시 변수에 저장
+        if (result == Pattern::FIVE) {
+            is_win = true;
+            break; // 5목이면 더 볼 필요 없음
+        }
+        if (result == Pattern::OPEN_FOUR || result == Pattern::CLOSED_FOUR) {
+            temp_fours.push_back({ Move(r, c), line_types[i] });
+        }
+        // "열린 삼 계열" 패턴들을 모두 수집
+        if (result == Pattern::OPEN_THREE || result == Pattern::GAPPED_OPEN_THREE || result == Pattern::DOUBLE_BLANKED_OPEN_THREE) {
+            temp_open_threes.push_back({ Move(r, c), line_types[i] });
+        }
+    }
+
+    // --- 2. 수집된 결과들을 조합하여 최종 패턴 판단 및 저장 ---
+
+    // 5목이 최우선
+    if (is_win) {
+        patterns.win_moves.push_back({ Move(r, c), LineType::DONTCARE });
+        return;
+    }
+
+    // "사사" 또는 "쌍삼"이 만들어졌는지 확인
+    bool is_double_four = (temp_fours.size() >= 2);
+    bool is_double_three = (temp_open_threes.size() >= 2);
+
+    // "사삼"이 만들어졌는지 확인
+    bool is_four_three = (!temp_fours.empty() && !temp_open_threes.empty());
+
+    // 흑돌의 금수(쌍사, 쌍삼) 처리
+    if (player == StoneType::BLACK && (is_double_four || is_double_three)) {
+        patterns.forbidden_spot.push_back({ Move(r, c), LineType::DONTCARE });
+    }
+    
+    if (is_four_three || (player == StoneType::WHITE && (is_double_four || is_double_three))) {
+        patterns.four_three_moves.push_back({ Move(r, c), LineType::DONTCARE });
+    }
+    /*
+    // 필승기가 아니라면, 단일 패턴들을 각자 리스트에 추가
+    else {
+        if (!temp_fours.empty()) {
+            patterns.all_four_moves.insert(patterns.all_four_moves.end(), temp_fours.begin(), temp_fours.end());
+        }
+        if (!temp_open_threes.empty()) {
+            patterns.all_open_three_moves.insert(patterns.all_open_three_moves.end(), temp_open_threes.begin(), temp_open_threes.end());
+        }
+    }
+    */
+}
+vector<Pattern> findBestPatternInSegment(vector<StoneType> segment, StoneType player)
+{
+
 }
 void PatternAnalyzer::analyze(const Board& board, StoneType ai_player) {
+    // playerPattern type
     ai_patterns.clear();
     opponent_patterns.clear();
     StoneType opponent_player = (ai_player == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
@@ -838,16 +987,21 @@ void PatternAnalyzer::analyzeLine(const Board& board, int r, int c, int dy, int 
     }
 
     // 추출된 9칸짜리 세그먼트를 분석 함수에 넘김
-    findPatternsInSegment(segment, r, c, player, patterns);
+    findPatternsInSegment(segment, r, c, dy, dx, player, patterns);
 }
 inline bool isBlocker(StoneType stone_to_check, StoneType opponent_player) {
     return stone_to_check == opponent_player || stone_to_check == StoneType::WALL;
 }
 // - findPatternsInSegment 함수: 추출된 벡터에서 패턴을 찾아내는 핵심 로직
-void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, int r, int c, StoneType player, PlayerPatterns& patterns) {
+void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, int r, int c, int dy, int dx, StoneType player, PlayerPatterns& patterns) {
     // segment의 크기는 9, 방금 놓은 돌은 항상 중앙인 인덱스 4에 위치함.
     StoneType opponent = (player == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
     StoneType empty = StoneType::EMPTY;
+    LineType line;
+    if (dy == 0 && dx == 1) line = LineType::HORIZONTAL;
+    else if (dy == 1 && dx == 0) line = LineType::VERTICAL;
+    else if (dy == 1 && dx == 1) line = LineType::DIAGONAL_MAIN;
+    else if (dy == 1 && dx == -1) line = LineType::DIAGONAL_ANTI;
 
     // 1. --- 5목 체크: ...XXXXX...---
     // 9칸 세그먼트 안에서 5목이 되는 모든 경우를 확인
@@ -857,7 +1011,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
             if (segment[i] == player &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == player && segment[i + 4] == player) {
-                patterns.win_moves.push_back(Move(r, c));
+                patterns.win_moves.emplace_back(Move(r, c), line);
                 return; // 5목을 찾으면 이 라인에 대한 더 이상의 분석은 불필요
             }
         }
@@ -871,7 +1025,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == player && segment[i + 4] == player &&
                 segment[i + 5] == empty) {
-                patterns.open_four_moves.push_back(Move(r, c));
+                patterns.open_four_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -884,13 +1038,13 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == player && segment[i + 4] == player &&
                 segment[i + 5] == empty) {
-                patterns.close_four_moves.push_back(Move(r, c));
+                patterns.close_four_moves.emplace_back(Move(r, c), line);
             }
             else if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == player && segment[i + 4] == player &&
                 isBlocker(segment[i + 5], opponent)) {
-                patterns.close_four_moves.push_back(Move(r, c));
+                patterns.close_four_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -902,17 +1056,17 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
             if (segment[i] == player &&
                 segment[i + 1] == empty && segment[i + 2] == player &&
                 segment[i + 3] == player && segment[i + 4] == player) {
-                patterns.blanked_four_moves.push_back(Move(r, c));
+                patterns.blanked_four_moves.emplace_back(Move(r, c), line);
             }
             else if (segment[i] == player &&
                 segment[i + 1] == player && segment[i + 2] == empty &&
                 segment[i + 3] == player && segment[i + 4] == player) {
-                patterns.blanked_four_moves.push_back(Move(r, c));
+                patterns.blanked_four_moves.emplace_back(Move(r, c), line);
             }
             else if (segment[i] == player &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == empty && segment[i + 4] == player) {
-                patterns.blanked_four_moves.push_back(Move(r, c));
+                patterns.blanked_four_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -924,7 +1078,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
             if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == player && segment[i + 4] == empty) {
-                patterns.open_three_moves.push_back(Move(r, c));
+                patterns.open_three_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -937,14 +1091,14 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
                 segment[i + 1] == player && segment[i + 2] == empty &&
                 segment[i + 3] == player && segment[i + 4] == player &&
                 segment[i + 5] == empty) {
-                patterns.blanked_open_three_moves.push_back(Move(r, c));
+                patterns.blanked_open_three_moves.emplace_back(Move(r, c), line);
             }
             else if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == empty && segment[i + 4] == player &&
                 segment[i + 5] == empty) {
-                patterns.blanked_open_three_moves.push_back(Move(r, c));
-                }
+                patterns.blanked_open_three_moves.emplace_back(Move(r, c), line);
+            }
         }
     }
 
@@ -955,12 +1109,12 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
             if (isBlocker(segment[i], opponent) &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == player && segment[i + 4] == empty) {
-                patterns.close_three_moves.push_back(Move(r, c));
+                patterns.close_three_moves.emplace_back(Move(r, c), line);
             }
             else if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == player && isBlocker(segment[i + 4], opponent)) {
-                patterns.close_three_moves.push_back(Move(r, c));
+                patterns.close_three_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -973,25 +1127,25 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
                 segment[i + 1] == player && segment[i + 2] == empty &&
                 segment[i + 3] == player && segment[i + 4] == player &&
                 segment[i + 5] == empty) {
-                patterns.blanked_close_three_moves.push_back(Move(r, c));
+                patterns.blanked_close_three_moves.emplace_back(Move(r, c), line);
             }
             else if (isBlocker(segment[i], opponent) &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == empty && segment[i + 4] == player &&
                 segment[i + 5] == empty) {
-                patterns.blanked_close_three_moves.push_back(Move(r, c));
+                patterns.blanked_close_three_moves.emplace_back(Move(r, c), line);
             }
             else if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == empty &&
                 segment[i + 3] == player && segment[i + 4] == player &&
                 isBlocker(segment[i + 5], opponent)) {
-                patterns.blanked_close_three_moves.push_back(Move(r, c));
+                patterns.blanked_close_three_moves.emplace_back(Move(r, c), line);
             }
             else if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == empty && segment[i + 4] == player &&
                 isBlocker(segment[i + 5], opponent)) {
-                patterns.blanked_close_three_moves.push_back(Move(r, c));
+                patterns.blanked_close_three_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -1003,7 +1157,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
             if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == empty) {
-                patterns.open_two_moves.push_back(Move(r, c));
+                patterns.open_two_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -1016,7 +1170,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
                 segment[i + 1] == player && segment[i + 2] == empty &&
                 segment[i + 3] == player && segment[i + 4] == empty &&
                 segment[i + 5] == player && segment[i + 6] == empty) {
-                patterns.double_blanked_open_three_moves.push_back(Move(r, c));
+                patterns.double_blanked_open_three_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -1028,12 +1182,12 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
             if (isBlocker(segment[i], opponent) &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 segment[i + 3] == empty) {
-                patterns.close_two_moves.push_back(Move(r, c));
+                patterns.close_two_moves.emplace_back(Move(r, c), line);
             }
             else if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == player &&
                 isBlocker(segment[i + 3], opponent)) {
-                patterns.close_two_moves.push_back(Move(r, c));
+                patterns.close_two_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -1045,7 +1199,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
             if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == empty &&
                 segment[i + 3] == player && segment[i + 4] == empty) {
-                patterns.blanked_open_two_moves.push_back(Move(r, c));
+                patterns.blanked_open_two_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -1057,12 +1211,12 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
             if (isBlocker(segment[i], opponent) &&
                 segment[i + 1] == player && segment[i + 2] == empty &&
                 segment[i + 3] == player && segment[i + 4] == empty) {
-                patterns.blanked_close_two_moves.push_back(Move(r, c));
+                patterns.blanked_close_two_moves.emplace_back(Move(r, c), line);
             }
             else if (segment[i] == empty &&
                 segment[i + 1] == player && segment[i + 2] == empty &&
                 segment[i + 3] == player && isBlocker(segment[i + 4], opponent)) {
-                patterns.blanked_close_two_moves.push_back(Move(r, c));
+                patterns.blanked_close_two_moves.emplace_back(Move(r, c), line);
             }
         }
     }
@@ -1075,7 +1229,7 @@ void PatternAnalyzer::findPatternsInSegment(const vector<StoneType>& segment, in
                 segment[i + 1] == player && segment[i + 2] == empty &&
                 segment[i + 3] == empty && segment[i + 4] == player &&
                 segment[i + 5] == empty) {
-                patterns.double_blanked_open_two_moves.push_back(Move(r, c));
+                patterns.double_blanked_open_two_moves.emplace_back(Move(r, c), line);
             }
         }
     }
