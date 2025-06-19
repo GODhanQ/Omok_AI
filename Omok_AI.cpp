@@ -5,13 +5,15 @@
 #include <string>
 #include <algorithm>
 #include <unordered_set>
+#include <chrono>
 #define NOMINMAX
 #include <Windows.h>
 using namespace std;
 
 // constexpr variables
 constexpr int Board_Size_2024180014{ 19 };
-constexpr int SearchDepth_2024180014{ 5 };
+//constexpr int SearchDepth_2024180014{ 5 };
+constexpr int TimeOut_2024180014{ 500 };
 
 // class & struct
 enum class StoneType {
@@ -250,7 +252,7 @@ public:
     const vector<PatternInfo>& getAIBlankedOpenTwoMoves() const { return ai_patterns.blanked_open_two_moves; }
     const vector<PatternInfo>& getAIBlankedCloseTwoMoves() const { return ai_patterns.blanked_close_two_moves; }
     const vector<PatternInfo>& getAIDoubleBlankedOpenTwoMoves() const { return ai_patterns.double_blanked_open_two_moves; }
-    const vector<PatternInfo>& getAIDoubleBlankedOpenTwoMoves() const { return ai_patterns.double_blanked_close_two_moves; }
+    const vector<PatternInfo>& getAIDoubleBlankedCloseTwoMoves() const { return ai_patterns.double_blanked_close_two_moves; }
     const vector<PatternInfo>& getAIForbiddenSpot() const { return ai_patterns.forbidden_spot; }
 
     // Get Opponent Moves
@@ -270,14 +272,79 @@ public:
     const vector<PatternInfo>& getOpponentBlankedOpenTwoMoves() const { return opponent_patterns.blanked_open_two_moves; }
     const vector<PatternInfo>& getOpponentBlankedCloseTwoMoves() const { return opponent_patterns.blanked_close_two_moves; }
     const vector<PatternInfo>& getOpponentDoubleBlankedOpenTwoMoves() const { return opponent_patterns.double_blanked_open_two_moves; }
-    const vector<PatternInfo>& getOpponentDoubleBlankedOpenTwoMoves() const { return opponent_patterns.double_blanked_close_two_moves; }
+    const vector<PatternInfo>& getOpponentDoubleBlankedCloseTwoMoves() const { return opponent_patterns.double_blanked_close_two_moves; }
     const vector<PatternInfo>& getOpponentForbiddenSpot() const { return opponent_patterns.forbidden_spot; }
 };
+class TimeoutException : public std::exception {};
 
 // variables
 Board board_2024180014;
 
 // functions
+Move find_best_move(const Board& current_real_board, StoneType ai_stone_type) {
+    // --- 1. 시간 설정 ---
+    auto start_time = std::chrono::steady_clock::now();
+    const int TimeOut = 500;
+    auto deadline = start_time + std::chrono::milliseconds(TimeOut - 20); // 20ms 여유
+
+    // --- 2. IDS를 위한 변수 설정 ---
+    Move best_move_so_far; // 현재까지 찾은 최선의 수
+    const int MAX_DEPTH = 15; // 탐색할 최대 깊이 (너무 크지 않게 설정)
+
+    // --- 3. IDS 메인 루프 ---
+    try {
+        for (int current_depth = 1; current_depth <= MAX_DEPTH; ++current_depth) {
+            Node* root_node = new Node();
+            Board board_for_search = current_real_board;
+            Move best_move_this_depth;
+            int best_value = -INFINITY;
+            int alpha = -INFINITY;
+            int beta = +INFINITY;
+
+            root_node->generate_children(board_for_search, ai_stone_type);
+
+            // TODO: (고급 최적화) 이전 깊이에서 찾은 최선의 수를 먼저 탐색하도록
+            // root_node->children의 순서를 정렬하면 효율이 극대화됩니다.
+
+
+
+            for (Node* child_node : root_node->children) {
+                board_for_search.placeStone(child_node->getMove(), ai_stone_type);
+
+                int move_value = minimax_alphabeta(child_node, board_for_search, current_depth - 1, alpha, beta, false, ai_stone_type, deadline);
+
+                board_for_search.retractMove(child_node->getMove());
+
+                if (move_value > best_value) {
+                    best_value = move_value;
+                    best_move_this_depth = child_node->getMove();
+                }
+                alpha = max(alpha, best_value);
+            }
+
+            best_move_so_far = best_move_this_depth;
+
+            delete root_node;
+        }
+    }
+    catch (const TimeoutException& e) {
+        std::cerr << "Timeout! Using best move from last completed depth." << std::endl;
+    }
+
+    // 만약 depth=1조차 완료 못했다면(시간이 매우 짧거나 컴퓨터가 느릴 경우),
+    // 둘 수 있는 아무 수나 반환해야 함 (폴백)
+    if (best_move_so_far.isNull()) {
+        // generate_neighborhood_moves와 같은 간단한 함수로 비상 수단 마련
+        auto emergency_moves = generate_neighborhood_moves(current_real_board);
+        if (!emergency_moves.empty()) return emergency_moves[0];
+        else {
+            return Move(Board::SIZE / 2, Board::SIZE / 2);
+        }
+    }
+
+    return best_move_so_far;
+}
+/*
 Move find_best_move(const Board& current_real_board, int search_depth, StoneType ai_stone_type) {
     Node* root_node = new Node();
     Board board_for_search = current_real_board;
@@ -309,6 +376,7 @@ Move find_best_move(const Board& current_real_board, int search_depth, StoneType
     delete root_node;
     return best_move;
 }
+*/
 /*
 Move find_best_move(const Board& current_real_board, int search_depth, StoneType ai_stone_type) {
     Node* root_node = new Node(); // 루트 노드 생성
@@ -341,10 +409,13 @@ Move find_best_move(const Board& current_real_board, int search_depth, StoneType
     return best_move;
 }
 */
-int minimax_alphabeta(Node* node, Board& board, int depth, int alpha, int beta, bool is_my_turn, StoneType ai_stone_type) {
+int minimax_alphabeta(Node* node, Board& board, int depth, int alpha, int beta, bool is_my_turn, StoneType ai_stone_type, const std::chrono::steady_clock::time_point& deadline) {
     // --- 종료 조건 ---
     if (depth == 0 || is_game_over(board, node->getMove())) { // is_game_over는 승패/무승부를 판단
         return static_eval_func(board, ai_stone_type);
+    }
+    if (std::chrono::steady_clock::now() > deadline) {
+        throw TimeoutException(); // 시간 초과 시 예외 발생
     }
 
     // --- 자식 노드 생성 ---
@@ -360,7 +431,7 @@ int minimax_alphabeta(Node* node, Board& board, int depth, int alpha, int beta, 
         for (Node* child_node : node->children) {
             board.placeStone(child_node->getMove(), current_player);
 
-            int eval = minimax_alphabeta(child_node, board, depth - 1, alpha, beta, false, ai_stone_type);
+            int eval = minimax_alphabeta(child_node, board, depth - 1, alpha, beta, false, ai_stone_type, deadline);
 
             board.retractMove(child_node->getMove());
 
@@ -378,7 +449,7 @@ int minimax_alphabeta(Node* node, Board& board, int depth, int alpha, int beta, 
         for (Node* child_node : node->children) {
             board.placeStone(child_node->getMove(), current_player);
 
-            int eval = minimax_alphabeta(child_node, board, depth - 1, alpha, beta, true, ai_stone_type);
+            int eval = minimax_alphabeta(child_node, board, depth - 1, alpha, beta, true, ai_stone_type, deadline);
 
             board.retractMove(child_node->getMove());
 
@@ -935,35 +1006,82 @@ void Node::generate_children(const Board& current_board, StoneType player_to_mov
     else if (!analyzer.getOpponentWinMoves().empty()) {
         candidate_moves = extract_moves(analyzer.getOpponentWinMoves());
     }
-    // 🥉 3순위: 나의 필승기 (사삼 등)
-    else if (!analyzer.getAIFourThreeMoves().empty()) {
+    // 🥉 3순위: 나의 필승기 (사삼 or 열린 사 등)
+    else if (!analyzer.getAIFourThreeMoves().empty() || !analyzer.getAIOpenFourMoves().empty()) {
         candidate_moves = extract_moves(analyzer.getAIFourThreeMoves());
+        const auto& open_fours = extract_moves(analyzer.getAIOpenFourMoves());
+        candidate_moves.insert(candidate_moves.end(), open_fours.begin(), open_fours.end());
     }
-    // 🏅 4순위: 상대의 필승기 방어
-    else if (!analyzer.getOpponentFourThreeMoves().empty()) {
+    // 🏅 4순위: 상대의 필승기 (사삼 또는 열린 넷) 방어
+    else if (!analyzer.getOpponentFourThreeMoves().empty() || !analyzer.getOpponentOpenFourMoves().empty()) {
         candidate_moves = extract_moves(analyzer.getOpponentFourThreeMoves());
+        const auto& opponent_open_fours = extract_moves(analyzer.getOpponentOpenFourMoves());
+        candidate_moves.insert(candidate_moves.end(), opponent_open_fours.begin(), opponent_open_fours.end());
     }
     // 🏅 5순위: 위에서 결정적인 수가 없었을 경우, 일반적인 중요 패턴들을 조합합니다.
     else {
-        // 나의 열린 넷 만들기
-        const auto& my_open_fours = extract_moves(analyzer.getAIOpenFourMoves());
-        candidate_moves.insert(candidate_moves.end(), my_open_fours.begin(), my_open_fours.end());
+        struct PrioritizedMove {
+            Move move;
+            int score;
+        };
+        std::vector<PrioritizedMove> scored_moves;
 
-        // 상대의 열린 넷 막기
-        const auto& opponent_open_fours = extract_moves(analyzer.getOpponentOpenFourMoves());
-        candidate_moves.insert(candidate_moves.end(), opponent_open_fours.begin(), opponent_open_fours.end());
+        // 2. 각 패턴에 대한 가중치(점수) 정의
+        constexpr int P_SCORE_MAKE_CLOSED_FOUR = 100000;
+        constexpr int P_SCORE_BLOCK_OPEN_THREE = 80000;
+        constexpr int P_SCORE_MAKE_OPEN_THREE = 50000;
+        constexpr int P_SCORE_BLOCK_CLOSED_FOUR = 10000;
+        constexpr int P_SCORE_MAKE_BLANKED_OPEN_THREE = 8000;
+        constexpr int P_SCORE_BLOCK_BLANKED_OPEN_THREE = 9000;
+        constexpr int P_SCORE_MAKE_CLOSED_THREE = 1000;
+        constexpr int P_SCORE_BLOCK_CLOSED_THREE = 1200;
+        constexpr int P_SCORE_MAKE_BLANKED_CLOSE_THREE = 1000;
+        constexpr int P_SCORE_BLOCK_BLANKED_CLOSE_THREE = 900;
+        constexpr int P_SCORE_BLOCK_OPEN_TWO = 600;
+        constexpr int P_SCORE_MAKE_OPEN_TWO = 500;
+        constexpr int P_SCORE_BLOCK_BLANKED_OPEN_TWO = 120;
+        constexpr int P_SCORE_MAKE_BLANKED_OPEN_TWO = 100;
+        constexpr int P_SCORE_BLOCK_CLOSED_TWO = 60;
+        constexpr int P_SCORE_MAKE_CLOSED_TWO = 50;
+        constexpr int P_SCORE_MAKE_DOUBLE_BLANKED_OPEN_TWO = 10;
+        constexpr int P_SCORE_MAKE_DOUBLE_BLANKED_CLOSE_TWO = 5;
 
-        // 나의 열린 삼 계열 (기본 + 띈 것) 모두 추가
-        const auto& my_open_threes = extract_moves(analyzer.getAIOpenThreeMoves());
-        candidate_moves.insert(candidate_moves.end(), my_open_threes.begin(), my_open_threes.end());
+        // 3. 분석 결과를 바탕으로 모든 후보 수에 점수를 매겨 scored_moves에 추가
+        for (const auto& info : analyzer.getAICloseFourMoves())     scored_moves.push_back({ info.move, P_SCORE_MAKE_CLOSED_FOUR });
+        for (const auto& info : analyzer.getOpponentOpenThreeMoves()) scored_moves.push_back({ info.move, P_SCORE_BLOCK_OPEN_THREE });
+        for (const auto& info : analyzer.getAIOpenThreeMoves())      scored_moves.push_back({ info.move, P_SCORE_MAKE_OPEN_THREE });
 
-        // 상대의 열린 삼 계열 막기
-        const auto& opponent_open_threes = extract_moves(analyzer.getOpponentOpenThreeMoves());
-        candidate_moves.insert(candidate_moves.end(), opponent_open_threes.begin(), opponent_open_threes.end());
+        // --- Tier 4-5급 공격/방어 ---
+        for (const auto& info : analyzer.getOpponentCloseFourMoves())   scored_moves.push_back({ info.move, P_SCORE_BLOCK_CLOSED_FOUR });
+        for (const auto& info : analyzer.getAIBlankedOpenThreeMoves())      scored_moves.push_back({ info.move, P_SCORE_MAKE_BLANKED_OPEN_THREE });
+        for (const auto& info : analyzer.getOpponentBlankedOpenThreeMoves()) scored_moves.push_back({ info.move, P_SCORE_BLOCK_BLANKED_OPEN_THREE });
+        for (const auto& info : analyzer.getAICloseThreeMoves())      scored_moves.push_back({ info.move, P_SCORE_MAKE_CLOSED_THREE });
+        for (const auto& info : analyzer.getOpponentCloseThreeMoves())  scored_moves.push_back({ info.move, P_SCORE_BLOCK_CLOSED_THREE });
+        for (const auto& info : analyzer.getAIBlankedCloseThreeMoves()) scored_moves.push_back({ info.move, P_SCORE_MAKE_BLANKED_CLOSE_THREE });
 
-        // 나의 막힌 넷 만들기 (공격의 마무리)
-        const auto& my_closed_fours = extract_moves(analyzer.getAICloseFourMoves());
-        candidate_moves.insert(candidate_moves.end(), my_closed_fours.begin(), my_closed_fours.end());
+        // --- Tier 5-6급 공격/방어 ---
+        for (const auto& info : analyzer.getOpponentBlankedCloseThreeMoves()) scored_moves.push_back({ info.move, P_SCORE_BLOCK_BLANKED_CLOSE_THREE }); // 빠진 부분 추가
+        for (const auto& info : analyzer.getOpponentOpenTwoMoves()) scored_moves.push_back({ info.move, P_SCORE_BLOCK_OPEN_TWO });
+        for (const auto& info : analyzer.getAIOpenTwoMoves())      scored_moves.push_back({ info.move, P_SCORE_MAKE_OPEN_TWO });
+        for (const auto& info : analyzer.getOpponentBlankedOpenTwoMoves()) scored_moves.push_back({ info.move, P_SCORE_BLOCK_BLANKED_OPEN_TWO }); // 빠진 부분 추가
+        for (const auto& info : analyzer.getAIBlankedOpenTwoMoves())    scored_moves.push_back({ info.move, P_SCORE_MAKE_BLANKED_OPEN_TWO });
+        for (const auto& info : analyzer.getOpponentCloseTwoMoves())    scored_moves.push_back({ info.move, P_SCORE_BLOCK_CLOSED_TWO });
+        for (const auto& info : analyzer.getAICloseTwoMoves())    scored_moves.push_back({ info.move, P_SCORE_MAKE_CLOSED_TWO });
+        for (const auto& info : analyzer.getAIDoubleBlankedOpenTwoMoves())    scored_moves.push_back({ info.move, P_SCORE_MAKE_DOUBLE_BLANKED_OPEN_TWO });
+        for (const auto& info : analyzer.getAIDoubleBlankedCloseTwoMoves())    scored_moves.push_back({ info.move, P_SCORE_MAKE_DOUBLE_BLANKED_CLOSE_TWO });
+
+        sort(scored_moves.begin(), scored_moves.end(), [](const auto& a, const auto& b) {
+            return a.score > b.score;
+            });
+
+        // 3. 정렬된 결과에서 Move만 추출하여 최종 후보군 생성
+        std::unordered_set<Move> added_moves;
+        for (const auto& scored_move : scored_moves) {
+            if (added_moves.find(scored_move.move) == added_moves.end()) {
+                candidate_moves.push_back(scored_move.move);
+                added_moves.insert(scored_move.move);
+            }
+        }
     }
     
     if (player_to_move == StoneType::BLACK) {
@@ -1371,7 +1489,7 @@ namespace PatternUtils {
 void WhiteAttack_2020180014(int* x, int* y)
 {
     Board tempBoard = board_2024180014;
-    Move location = find_best_move(tempBoard, SearchDepth_2024180014, StoneType::WHITE);
+    Move location = find_best_move(tempBoard, StoneType::WHITE);
 
     *y = location.row;
     *x = location.col;
@@ -1386,7 +1504,8 @@ void WhiteDefence_2020180014(int x, int y)
 }
 void BlackAttack_2020180014(int* x, int* y)
 {
-    Move location = find_best_move(board_2024180014, SearchDepth_2024180014, StoneType::BLACK);
+    Board tempBoard = board_2024180014;
+    Move location = find_best_move(tempBoard, StoneType::BLACK);
 
     *y = location.row;
     *x = location.col;
