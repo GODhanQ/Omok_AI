@@ -81,6 +81,16 @@ public:
         }
         return true;
     }
+    bool isFull() const {
+        for (int r = 0; r < SIZE; ++r) {
+            for (int c = 0; c < SIZE; ++c) {
+                if (this->board[r][c] == StoneType::EMPTY) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
     StoneType getStone(int r, int c) const {
         if (!isOnBoard(r, c)) {
             throw out_of_range("Board coordinates are out of range.");
@@ -146,6 +156,9 @@ struct Node {
         for (Node* child : children) {
             delete child;
         }
+    }
+    Move getMove() {
+        return location;
     }
     vector<Move> get_possible_moves() {
         vector<Move> possible_moves;
@@ -266,6 +279,38 @@ Board board_2024180014;
 
 // functions
 Move find_best_move(const Board& current_real_board, int search_depth, StoneType ai_stone_type) {
+    Node* root_node = new Node();
+    Board board_for_search = current_real_board;
+
+    Move best_move;
+    int best_value = -INFINITY;
+
+    root_node->generate_children(board_for_search, ai_stone_type);
+
+    int alpha = -INFINITY;
+    int beta = +INFINITY;
+
+    for (Node* child_node : root_node->children) {
+        board_for_search.placeStone(child_node->getMove(), ai_stone_type);
+
+        int move_value = minimax_alphabeta(child_node, board_for_search, search_depth - 1, alpha, beta, false, ai_stone_type);
+
+        board_for_search.retractMove(child_node->getMove());
+
+        if (move_value > best_value) {
+            best_value = move_value;
+            best_move = child_node->getMove();
+        }
+
+        // 최상위 레벨에서도 alpha 값을 갱신해 줄 수 있습니다.
+        alpha = std::max(alpha, best_value);
+    }
+
+    delete root_node;
+    return best_move;
+}
+/*
+Move find_best_move(const Board& current_real_board, int search_depth, StoneType ai_stone_type) {
     Node* root_node = new Node(); // 루트 노드 생성
     Board board_for_search = current_real_board; // 탐색을 위한 보드 복사
 
@@ -295,6 +340,59 @@ Move find_best_move(const Board& current_real_board, int search_depth, StoneType
     delete root_node; // 탐색이 끝난 트리의 메모리 해제
     return best_move;
 }
+*/
+int minimax_alphabeta(Node* node, Board& board, int depth, int alpha, int beta, bool is_my_turn, StoneType ai_stone_type) {
+    // --- 종료 조건 ---
+    if (depth == 0 || is_game_over(board, node->getMove())) { // is_game_over는 승패/무승부를 판단
+        return static_eval_func(board, ai_stone_type);
+    }
+
+    // --- 자식 노드 생성 ---
+    StoneType current_player = is_my_turn ? ai_stone_type : get_opponent_color(ai_stone_type);
+    node->generate_children(board, current_player);
+    if (node->children.empty()) {
+        return static_eval_func(board, ai_stone_type);
+    }
+
+    // --- 재귀 탐색 ---
+    if (is_my_turn) { // Max 플레이어 (나의 턴)
+        int max_eval = -INFINITY;
+        for (Node* child_node : node->children) {
+            board.placeStone(child_node->getMove(), current_player);
+
+            int eval = minimax_alphabeta(child_node, board, depth - 1, alpha, beta, false, ai_stone_type);
+
+            board.retractMove(child_node->getMove());
+
+            max_eval = std::max(max_eval, eval);
+            alpha = std::max(alpha, eval); // ★★★ alpha 값 갱신 ★★★
+
+            if (beta <= alpha) {
+                break; // ★★★ 가지치기(Pruning) 발생! ★★★
+            }
+        }
+        return max_eval;
+    }
+    else { // Min 플레이어 (상대방 턴)
+        int min_eval = +INFINITY;
+        for (Node* child_node : node->children) {
+            board.placeStone(child_node->getMove(), current_player);
+
+            int eval = minimax_alphabeta(child_node, board, depth - 1, alpha, beta, true, ai_stone_type);
+
+            board.retractMove(child_node->getMove());
+
+            min_eval = std::min(min_eval, eval);
+            beta = std::min(beta, eval); // ★★★ beta 값 갱신 ★★★
+
+            if (beta <= alpha) {
+                break; // ★★★ 가지치기(Pruning) 발생! ★★★
+            }
+        }
+        return min_eval;
+    }
+}
+/*
 int minimax(Node* node, Board& board, int depth, bool ismy_turn, StoneType ai_stone_type)
 {
     if (depth == 0) {
@@ -341,6 +439,21 @@ int minimax(Node* node, Board& board, int depth, bool ismy_turn, StoneType ai_st
         }
         return min_eval;
     }
+}
+*/
+StoneType get_opponent_color(StoneType player_color) {
+    return (player_color == StoneType::BLACK) ? StoneType::WHITE : StoneType::BLACK;
+}
+
+// 게임이 끝났는지 확인하는 함수
+bool is_game_over(const Board& board, const Move& last_move) {
+    if (board.checkForWin(last_move) != StoneType::EMPTY) {
+        return true;
+    }
+    if (board.isFull()) { // isFull() 함수가 있다고 가정
+        return true;
+    }
+    return false;
 }
 int static_eval_func(const Board& board, StoneType ai_player) {
     int my_score = 0;
@@ -397,6 +510,7 @@ int analyze_patterns_in_line(const vector<StoneType>& line, StoneType stone_type
     constexpr int SCORE_CLOSED_TWO = 10;
     constexpr int SCORE_BLANKED_CLOSED_TWO = 5;
     constexpr int SCORE_DOUBLE_BLANKED_OPEN_TWO = 5;
+    constexpr int SCORE_DOUBLE_BLANKED_CLOSE_TWO = 3;
 
     // ★★★ 중요: for 루프의 종료 조건을 i < line.size() 로 수정 ★★★
     for (int i = 0; i < line.size(); ++i) {
@@ -504,6 +618,14 @@ int analyze_patterns_in_line(const vector<StoneType>& line, StoneType stone_type
         else if (i < (int)line.size() - 6) { // 창문 크기 6
             // 두 칸 띈 열린 2목: _X__X_
             if (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == empty && line[i + 4] == stone_type && line[i + 5] == empty) {
+                score += SCORE_DOUBLE_BLANKED_OPEN_TWO;
+                i += 5; continue;
+            }
+        }
+        else if (i < (int)line.size() - 6) { // 창문 크기 6
+            // 두 칸 띈 열린 2목: BX__X_ | _X__XB
+            if ((isBlocker(line[i], opponent) && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == empty && line[i + 4] == stone_type && line[i + 5] == empty) ||
+                (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == empty && line[i + 4] == stone_type && isBlocker(line[i + 5], opponent))) {
                 score += SCORE_DOUBLE_BLANKED_OPEN_TWO;
                 i += 5; continue;
             }
@@ -924,7 +1046,7 @@ void PatternAnalyzer::checkPatternsAfterMove(const Board& board, int r, int c, S
     const LineType line_types[4] = { LineType::HORIZONTAL, LineType::VERTICAL, LineType::DIAGONAL_MAIN, LineType::DIAGONAL_ANTI };
 
     for (int i = 0; i < 4; ++i) {
-        std::vector<StoneType> segment = extractLineSegment(temp_board, r, c, directions[i][0], directions[i][1]);
+        vector<StoneType> segment = extractLineSegment(temp_board, r, c, directions[i][0], directions[i][1], player);
 
         // ★ 중요: findBestPatternInSegment 함수는 이제 temp_patterns를 직접 채웁니다.
         findBestPatternInSegment(segment, r, c, line_types[i], player, temp_patterns);
@@ -989,6 +1111,7 @@ void PatternAnalyzer::checkPatternsAfterMove(const Board& board, int r, int c, S
     final_patterns.double_blanked_close_two_moves.insert(final_patterns.double_blanked_close_two_moves.end(), temp_patterns.double_blanked_close_two_moves.begin(), temp_patterns.double_blanked_close_two_moves.end());
     
 }
+
 // Board 멤버 함수
 StoneType Board::checkForWin(const Move& last_move) const {
     int r = last_move.row;
