@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <chrono>
+#include <functional>
 #define NOMINMAX
 #include <Windows.h>
 using namespace std;
@@ -517,7 +518,7 @@ void initialize_opening_book();
 
 // functions
 Move_2024180014 find_best_move_2024180014(const Board_2024180014& current_real_board, StoneType_2024180014 ai_stone_type) {
-    current_real_board.show();
+    //current_real_board.show();
     
     // --- 1. 시간 설정 ---
     auto start_time = std::chrono::steady_clock::now();
@@ -526,8 +527,16 @@ Move_2024180014 find_best_move_2024180014(const Board_2024180014& current_real_b
 
     // --- 2. opening book 조회 ---
     string current_board_key = current_real_board.toStringKey();
+
+    // ★★★ 디버깅을 위한 출력 추가 ★★★
+    //cout << "\n[AI Turn] LOOKING FOR KEY: " << current_board_key.substr(0, 40) << "..." << endl;
+
     if (opening_book.count(current_board_key)) {
+        //cout << "[AI Turn] Found in Opening Book!" << endl; // ★★★
         return opening_book[current_board_key];
+    }
+    else {
+        //cout << "[AI Turn] Not in Book. Starting search..." << endl; // ★★★
     }
 
     // --- 3. IDS를 위한 변수 설정 ---
@@ -692,11 +701,11 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
     StoneType_2024180014 opponent = (stone_type == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
 
     // 패턴별 점수 정의
-    constexpr int SCORE_FIVE = 100000000;
-    constexpr int SCORE_OPEN_FOUR = 1000000;
-    constexpr int SCORE_CLOSED_FOUR = 100000;
-    constexpr int SCORE_BLANKED_FOUR = 100000; // 띈 넷도 막힌 넷과 유사한 위력
-    constexpr int SCORE_OPEN_THREE = 10000;
+    constexpr int SCORE_FIVE = 1000000000;
+    constexpr int SCORE_OPEN_FOUR = 6000000;
+    constexpr int SCORE_CLOSED_FOUR = 500000;
+    constexpr int SCORE_BLANKED_FOUR = 500000; // 띈 넷도 막힌 넷과 유사한 위력
+    constexpr int SCORE_OPEN_THREE = 400000;
     constexpr int SCORE_BLANKED_OPEN_THREE = 5000;
     constexpr int SCORE_CLOSED_THREE = 1000;
     constexpr int SCORE_BLANKED_CLOSED_THREE = 500;
@@ -711,16 +720,15 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
     for (int i = 0; i < line.size(); ++i) {
 
         // --- 5목 체크 (가장 높은 우선순위) ---
-        if (i < (int)line.size() - 5) {
+        if (i <= (int)line.size() - 5) {
             if (line[i] == stone_type && line[i + 1] == stone_type && line[i + 2] == stone_type &&
                 line[i + 3] == stone_type && line[i + 4] == stone_type) {
-                score += SCORE_FIVE;
-                i += 4; continue;
+                return SCORE_FIVE;
             }
         }
 
         // --- 4목 계열 패턴 ---
-        else if (i < (int)line.size() - 6) { // 창문 크기 6
+        if (i < (int)line.size() - 6) { // 창문 크기 6
             // 열린 4목: _XXXX_
             if (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == stone_type &&
                 line[i + 3] == stone_type && line[i + 4] == stone_type && line[i + 5] == empty) {
@@ -734,7 +742,7 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
                 i += 5; continue;
             }
         }
-        else if (i < (int)line.size() - 5) { // 창문 크기 5
+        if (i < (int)line.size() - 5) { // 창문 크기 5
             // 한 칸 띈 4목: X_XXX, XX_XX, XXX_X
             if ((line[i] == stone_type && line[i + 1] == empty && line[i + 2] == stone_type && line[i + 3] == stone_type && line[i + 4] == stone_type) ||
                 (line[i] == stone_type && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == stone_type && line[i + 4] == stone_type) ||
@@ -745,7 +753,7 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
         }
 
         // --- 3목 계열 패턴 ---
-        else if (i < (int)line.size() - 5) { // 창문 크기 5
+        if (i < (int)line.size() - 5) { // 창문 크기 5
             // 열린 3목: _XXX_
             if (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == stone_type &&
                 line[i + 3] == stone_type && line[i + 4] == empty) {
@@ -753,7 +761,7 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
                 i += 4; continue;
             }
         }
-        else if (i < (int)line.size() - 6) { // 창문 크기 6
+        if (i < (int)line.size() - 6) { // 창문 크기 6
             // 한 칸 띈 열린 3목: _X_XX_ 또는 _XX_X_
             if ((line[i] == empty && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == stone_type && line[i + 4] == stone_type && line[i + 5] == empty) ||
                 (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == stone_type && line[i + 3] == empty && line[i + 4] == stone_type && line[i + 5] == empty)) {
@@ -761,7 +769,7 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
                 i += 5; continue;
             }
         }
-        else if (i < (int)line.size() - 5) { // 창문 크기 5
+        if (i < (int)line.size() - 5) { // 창문 크기 5
             // 막힌 3목: BXXX_ 또는 _XXXB
             if ((isBlocker_2024180014(line[i], opponent) && line[i + 1] == stone_type && line[i + 2] == stone_type && line[i + 3] == stone_type && line[i + 4] == empty) ||
                 (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == stone_type && line[i + 3] == stone_type && isBlocker_2024180014(line[i + 4], opponent))) {
@@ -769,7 +777,7 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
                 i += 4; continue;
             }
         }
-        else if (i < (int)line.size() - 6) { // 창문 크기 6
+        if (i < (int)line.size() - 6) { // 창문 크기 6
             // 막힌 한 칸 띈 3목: BX_XX_, BXX_X_ 등
             if ((isBlocker_2024180014(line[i], opponent) && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == stone_type && line[i + 4] == stone_type && line[i + 5] == empty) ||
                 (isBlocker_2024180014(line[i], opponent) && line[i + 1] == stone_type && line[i + 2] == stone_type && line[i + 3] == empty && line[i + 4] == stone_type && line[i + 5] == empty) ||
@@ -779,7 +787,7 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
                 i += 5; continue;
             }
         }
-        else if (i < (int)line.size() - 7) { // 창문 크기 7
+        if (i < (int)line.size() - 7) { // 창문 크기 7
             // 두 칸 띈 열린 3목: _X_X_X_
             if (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == stone_type && line[i + 4] == empty && line[i + 5] == stone_type && line[i + 6] == empty) {
                 score += SCORE_DOUBLE_BLANKED_OPEN_THREE;
@@ -788,21 +796,21 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
         }
 
         // --- 2목 계열 패턴 ---
-        else if (i < (int)line.size() - 4) { // 창문 크기 4
+        if (i < (int)line.size() - 4) { // 창문 크기 4
             // 열린 2목: _XX_
             if (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == stone_type && line[i + 3] == empty) {
                 score += SCORE_OPEN_TWO;
                 i += 3; continue;
             }
         }
-        else if (i < (int)line.size() - 5) { // 창문 크기 5
+        if (i < (int)line.size() - 5) { // 창문 크기 5
             // 한 칸 띈 열린 2목: _X_X_
             if (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == stone_type && line[i + 4] == empty) {
                 score += SCORE_BLANKED_OPEN_TWO;
                 i += 4; continue;
             }
         }
-        else if (i < (int)line.size() - 4) { // 창문 크기 4
+        if (i < (int)line.size() - 4) { // 창문 크기 4
             // 막힌 2목: BXX_ 또는 _XXB
             if ((isBlocker_2024180014(line[i], opponent) && line[i + 1] == stone_type && line[i + 2] == stone_type && line[i + 3] == empty) ||
                 (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == stone_type && isBlocker_2024180014(line[i + 3], opponent))) {
@@ -810,14 +818,14 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
                 i += 3; continue;
             }
         }
-        else if (i < (int)line.size() - 6) { // 창문 크기 6
+        if (i < (int)line.size() - 6) { // 창문 크기 6
             // 두 칸 띈 열린 2목: _X__X_
             if (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == empty && line[i + 4] == stone_type && line[i + 5] == empty) {
                 score += SCORE_DOUBLE_BLANKED_OPEN_TWO;
                 i += 5; continue;
             }
         }
-        else if (i < (int)line.size() - 6) { // 창문 크기 6
+        if (i < (int)line.size() - 6) { // 창문 크기 6
             // 두 칸 띈 열린 2목: BX__X_ | _X__XB
             if ((isBlocker_2024180014(line[i], opponent) && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == empty && line[i + 4] == stone_type && line[i + 5] == empty) ||
                 (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == empty && line[i + 4] == stone_type && isBlocker_2024180014(line[i + 5], opponent))) {
@@ -825,7 +833,7 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
                 i += 5; continue;
             }
         }
-        else if (i < (int)line.size() - 5) { // 창문 크기 5
+        if (i < (int)line.size() - 5) { // 창문 크기 5
             // 막힌 한 칸 띈 2목: BX_X_ 또는 _X_XB
             if ((isBlocker_2024180014(line[i], opponent) && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == stone_type && line[i + 4] == empty) ||
                 (line[i] == empty && line[i + 1] == stone_type && line[i + 2] == empty && line[i + 3] == stone_type && isBlocker_2024180014(line[i + 4], opponent))) {
@@ -1059,18 +1067,53 @@ vector<Move_2024180014> generate_neighborhood_moves_2024180014(const Board_20241
 inline bool isBlocker_2024180014(StoneType_2024180014 stone_to_check, StoneType_2024180014 opponent_player) {
     return stone_to_check == opponent_player || stone_to_check == StoneType_2024180014::WALL;
 }
-void add_sequence_to_book(const vector<Move_2024180014>& sequence) {
-    if (sequence.empty()) return;
+void add_sequence_to_book(const std::vector<Move_2024180014>& base_sequence) {
+    if (base_sequence.empty()) return;
 
-    Board_2024180014 temp_board;
-    StoneType_2024180014 current_stone = StoneType_2024180014::BLACK;
+    constexpr int center = Board_2024180014::SIZE / 2; // 중심점 (9)
 
-    for (size_t i = 0; i < sequence.size() - 1; ++i) {
-        opening_book[temp_board.toStringKey()] = sequence[i];
+    // 8개의 대칭 변환 함수 정의 (람다 사용)
+    vector<function<Move_2024180014(Move_2024180014)>> transforms;
 
-        temp_board.placeStone(sequence[i], current_stone);
+    // 1. 원본
+    transforms.push_back([&](Move_2024180014 m) { return m; });
+    // 2. 90도 회전
+    transforms.push_back([&](Move_2024180014 m) { return Move_2024180014(center - (m.col - center), center + (m.row - center)); });
+    // 3. 180도 회전
+    transforms.push_back([&](Move_2024180014 m) { return Move_2024180014(center - (m.row - center), center - (m.col - center)); });
+    // 4. 270도 회전
+    transforms.push_back([&](Move_2024180014 m) { return Move_2024180014(center + (m.col - center), center - (m.row - center)); });
 
-        current_stone = (current_stone == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
+    // 5. 좌우 반전
+    transforms.push_back([&](Move_2024180014 m) { return Move_2024180014(m.row, center - (m.col - center)); });
+    // 6. 좌우 반전 + 90도 회전
+    transforms.push_back([&](Move_2024180014 m) { m.col = center - (m.col - center); return Move_2024180014(center - (m.col - center), center + (m.row - center)); });
+    // 7. 좌우 반전 + 180도 회전
+    transforms.push_back([&](Move_2024180014 m) { m.col = center - (m.col - center); return Move_2024180014(center - (m.row - center), center - (m.col - center)); });
+    // 8. 좌우 반전 + 270도 회전
+    transforms.push_back([&](Move_2024180014 m) { m.col = center - (m.col - center); return Move_2024180014(center + (m.col - center), center - (m.row - center)); });
+
+    // 8개의 변환을 각각 적용하여 오프닝 북에 추가
+    for (const auto& transform : transforms) {
+        Board_2024180014 temp_board;
+        StoneType_2024180014 current_stone = StoneType_2024180014::BLACK;
+
+        for (size_t i = 0; i < base_sequence.size(); ++i) {
+            // 현재 기보의 수를 현재 변환에 맞게 대칭 이동
+            Move_2024180014 transformed_move = transform(base_sequence[i]);
+
+            string key = temp_board.toStringKey();
+
+            // 오프닝 북에 해당 상태가 아직 없다면, 다음 수를 등록
+            // (이미 다른 대칭 형태로 등록된 경우 중복 방지)
+            if (opening_book.find(key) == opening_book.end()) {
+                opening_book[key] = transformed_move;
+            }
+
+            // 보드에 대칭 이동된 수를 놓아 다음 상태로 진행
+            temp_board.placeStone(transformed_move, current_stone);
+            current_stone = (current_stone == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
+        }
     }
 }
 void initialize_opening_book() {
@@ -1087,6 +1130,16 @@ void initialize_opening_book() {
 
     // 명성 오프닝
     add_sequence_to_book({ {9, 9}, {9, 10}, {10, 9}, {11, 8}, {8, 11} });
+
+    add_sequence_to_book({ {9, 9}, {9, 10}, {10, 10} });
+    add_sequence_to_book({ {9, 9}, {9, 10}, {8, 10} });
+    add_sequence_to_book({ {9, 9}, {9, 8}, {8, 8} });
+    add_sequence_to_book({ {9, 9}, {10, 9}, {9, 10} });
+
+    add_sequence_to_book({ {9, 9}, {9, 10}, {9, 11}, {8, 10}, {10, 10} });
+    add_sequence_to_book({ {9, 9}, {9, 10}, {10, 9}, {10, 10}, {8, 9} });
+    add_sequence_to_book({ {9, 9}, {9, 10}, {8, 10}, {8, 9}, {7, 10} });
+    add_sequence_to_book({ {9, 9}, {9, 10}, {10, 9}, {10, 10}, {8, 10} });
 }
 struct OpeningBookInitializer {
     OpeningBookInitializer() {
