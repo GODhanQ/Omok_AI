@@ -8,20 +8,21 @@
 #include <unordered_map>
 #include <chrono>
 #include <functional>
+#include <limits>
 #define NOMINMAX
 #include <Windows.h>
 using namespace std;
 
 // constexpr variables
 constexpr int Board_Size_2024180014{ 19 };
-//constexpr int SearchDepth_2024180014{ 5 };
 constexpr int TimeOut_2024180014{ 500 };
+constexpr int INFINIT{ 2'147'483'647 };
 
 // class & struct
 enum class StoneType_2024180014 {
     EMPTY,
-    BLACK,
-    WHITE,
+    BLACK_2024180014,
+    WHITE_2024180014,
     WALL
 };
 enum class Pattern_2024180014 {
@@ -57,7 +58,6 @@ struct Move_2024180014 {
     Move_2024180014() : row(-1), col(-1) {}
     Move_2024180014(int r, int c) : row(r), col(c) {}
 
-    // --- 유틸리티 함수들 (선택 사항이지만 구현을 강력히 권장합니다) ---
     bool isNull() const {
         return row == -1 && col == -1;
     }
@@ -139,8 +139,8 @@ public:
             printf("%2d ", r);
             for (int c = 0; c < SIZE; ++c) {
                 char stone_char = '.';
-                if (board[r][c] == StoneType_2024180014::BLACK) stone_char = 'X';
-                else if (board[r][c] == StoneType_2024180014::WHITE) stone_char = 'O';
+                if (board[r][c] == StoneType_2024180014::BLACK_2024180014) stone_char = 'X';
+                else if (board[r][c] == StoneType_2024180014::WHITE_2024180014) stone_char = 'O';
                 cout << stone_char << " ";
             }
             cout << endl;
@@ -150,7 +150,6 @@ public:
         string key = "";
         for (int r = 0; r < SIZE; ++r) {
             for (int c = 0; c < SIZE; ++c) {
-                // EMPTY는 '0', BLACK은 '1', WHITE는 '2' 등으로 변환하여 추가
                 key += to_string(static_cast<int>(board[r][c]));
             }
         }
@@ -188,7 +187,6 @@ struct Node_2024180014 {
             if (target_node->location == location) return *target_node;
         }
     }
-    // bool is_leaf(const Board& board) const;
     void generate_children_2024180014(const Board_2024180014& board, StoneType_2024180014 current_player);
     vector<Move_2024180014> extract_moves_2024180014(const vector<PatternInfo_2024180014>& infos);
     void createChildNodesFromMoves_2024180014(std::vector<Move_2024180014>& moves);
@@ -294,7 +292,6 @@ namespace std {
     template <>
     struct hash<Move_2024180014> {
         size_t operator()(const Move_2024180014& m) const {
-            // 간단하면서도 효과적인 해시 조합 방식
             size_t h1 = hash<int>()(m.row);
             size_t h2 = hash<int>()(m.col);
             return h1 ^ (h2 << 1);
@@ -302,13 +299,6 @@ namespace std {
     };
 }
 namespace PatternUtils {
-
-    /**
-     * @brief 주어진 돌이 특정 플레이어에게 방해물(Blocker)인지 확인합니다.
-     * @param stone_to_check 검사할 돌의 타입
-     * @param opponent_player 상대방 플레이어의 돌 타입
-     * @return 방해물(상대방 돌 또는 벽)이면 true, 아니면 false
-     */
     inline bool isBlocker_PatternUtils(StoneType_2024180014 stone_to_check, StoneType_2024180014 opponent_player) {
         return stone_to_check == opponent_player || stone_to_check == StoneType_2024180014::WALL;
     }
@@ -518,30 +508,25 @@ void initialize_opening_book();
 
 // functions
 Move_2024180014 find_best_move_2024180014(const Board_2024180014& current_real_board, StoneType_2024180014 ai_stone_type) {
-    //current_real_board.show();
-    
     // --- 1. 시간 설정 ---
     auto start_time = std::chrono::steady_clock::now();
     const int TimeOut = 500;
-    auto deadline = start_time + std::chrono::milliseconds(TimeOut - 20); // 20ms 여유
+    auto deadline = start_time + std::chrono::milliseconds(TimeOut - 20);
 
     // --- 2. opening book 조회 ---
     string current_board_key = current_real_board.toStringKey();
 
-    // ★★★ 디버깅을 위한 출력 추가 ★★★
-    //cout << "\n[AI Turn] LOOKING FOR KEY: " << current_board_key.substr(0, 40) << "..." << endl;
-
     if (opening_book.count(current_board_key)) {
-        //cout << "[AI Turn] Found in Opening Book!" << endl; // ★★★
+        //cout << "[AI Turn] Found in Opening Book!" << endl;
         return opening_book[current_board_key];
     }
     else {
-        //cout << "[AI Turn] Not in Book. Starting search..." << endl; // ★★★
+        //cout << "[AI Turn] Not in Book. Starting search..." << endl;
     }
 
     // --- 3. IDS를 위한 변수 설정 ---
-    Move_2024180014 best_move_so_far; // 현재까지 찾은 최선의 수
-    const int MAX_DEPTH = 15; // 탐색할 최대 깊이 (너무 크지 않게 설정)
+    Move_2024180014 best_move_so_far;
+    const int MAX_DEPTH = 15;
 
     // --- 4. IDS 메인 루프 ---
     try {
@@ -549,7 +534,7 @@ Move_2024180014 find_best_move_2024180014(const Board_2024180014& current_real_b
             Node_2024180014* root_node = new Node_2024180014();
             Board_2024180014 board_for_search = current_real_board;
             Move_2024180014 best_move_this_depth;
-            constexpr int INF{ numeric_limits<int>::max() };
+            constexpr int INF{ INFINIT };
 
             int best_value = -INF;
             int alpha = -INF;
@@ -580,10 +565,8 @@ Move_2024180014 find_best_move_2024180014(const Board_2024180014& current_real_b
         std::cerr << "Timeout! Using best move from last completed depth." << std::endl;
     }
 
-    // 만약 depth=1조차 완료 못했다면(시간이 매우 짧거나 컴퓨터가 느릴 경우),
-    // 둘 수 있는 아무 수나 반환해야 함 (폴백)
+    // 최적 수를 못 찾으면 주변 2칸 수 두기
     if (best_move_so_far.isNull()) {
-        // generate_neighborhood_moves와 같은 간단한 함수로 비상 수단 마련
         auto emergency_moves = generate_neighborhood_moves_2024180014(current_real_board);
         if (!emergency_moves.empty()) return emergency_moves[0];
         else {
@@ -595,15 +578,15 @@ Move_2024180014 find_best_move_2024180014(const Board_2024180014& current_real_b
 }
 int minimax_alphabeta_2024180014(Node_2024180014* node, Board_2024180014& board, int depth, int alpha, int beta, bool is_my_turn, StoneType_2024180014 ai_stone_type, const std::chrono::steady_clock::time_point& deadline) {
     // --- 종료 조건 ---
-    if (depth == 0 || is_game_over_2024180014(board, node->getMove())) { // is_game_over는 승패/무승부를 판단
+    if (depth == 0 || is_game_over_2024180014(board, node->getMove())) {
         return static_eval_func_2024180014(board, ai_stone_type);
     }
     if (std::chrono::steady_clock::now() > deadline) {
-        throw TimeoutException_2024180014(); // 시간 초과 시 예외 발생
+        throw TimeoutException_2024180014();
     }
 
     // --- 자식 노드 생성 ---
-    constexpr int INF{ numeric_limits<int>::max() };
+    constexpr int INF{ INFINIT };
     StoneType_2024180014 current_player = is_my_turn ? ai_stone_type : get_opponent_color_2024180014(ai_stone_type);
     node->generate_children_2024180014(board, current_player);
     if (node->children.empty()) {
@@ -611,7 +594,7 @@ int minimax_alphabeta_2024180014(Node_2024180014* node, Board_2024180014& board,
     }
 
     // --- 재귀 탐색 ---
-    if (is_my_turn) { // Max 플레이어 (나의 턴)
+    if (is_my_turn) {
         int max_eval = -INF;
         for (Node_2024180014* child_node : node->children) {
             board.placeStone(child_node->getMove(), current_player);
@@ -620,16 +603,16 @@ int minimax_alphabeta_2024180014(Node_2024180014* node, Board_2024180014& board,
 
             board.retractMove(child_node->getMove());
 
-            max_eval = std::max(max_eval, eval);
-            alpha = std::max(alpha, eval); // ★★★ alpha 값 갱신 ★★★
+            max_eval = max(max_eval, eval);
+            alpha = max(alpha, eval);
 
             if (beta <= alpha) {
-                break; // ★★★ 가지치기(Pruning) 발생! ★★★
+                break;
             }
         }
         return max_eval;
     }
-    else { // Min 플레이어 (상대방 턴)
+    else {
         int min_eval = +INF;
         for (Node_2024180014* child_node : node->children) {
             board.placeStone(child_node->getMove(), current_player);
@@ -638,8 +621,8 @@ int minimax_alphabeta_2024180014(Node_2024180014* node, Board_2024180014& board,
 
             board.retractMove(child_node->getMove());
 
-            min_eval = std::min(min_eval, eval);
-            beta = std::min(beta, eval);
+            min_eval = min(min_eval, eval);
+            beta = min(beta, eval);
 
             if (beta <= alpha) {
                 break;
@@ -649,13 +632,13 @@ int minimax_alphabeta_2024180014(Node_2024180014* node, Board_2024180014& board,
     }
 }
 StoneType_2024180014 get_opponent_color_2024180014(StoneType_2024180014 player_color) {
-    return (player_color == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
+    return (player_color == StoneType_2024180014::BLACK_2024180014) ? StoneType_2024180014::WHITE_2024180014 : StoneType_2024180014::BLACK_2024180014;
 }
 bool is_game_over_2024180014(const Board_2024180014& board, const Move_2024180014& last_move) {
     if (board.checkForWin_2024180014(last_move) != StoneType_2024180014::EMPTY) {
         return true;
     }
-    if (board.isFull()) { // isFull() 함수가 있다고 가정
+    if (board.isFull()) {
         return true;
     }
     return false;
@@ -663,7 +646,7 @@ bool is_game_over_2024180014(const Board_2024180014& board, const Move_202418001
 int static_eval_func_2024180014(const Board_2024180014& board, StoneType_2024180014 ai_player) {
     int my_score = 0;
     int opponent_score = 0;
-    StoneType_2024180014 opponent_player = (ai_player == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
+    StoneType_2024180014 opponent_player = (ai_player == StoneType_2024180014::BLACK_2024180014) ? StoneType_2024180014::WHITE_2024180014 : StoneType_2024180014::BLACK_2024180014;
 
     // 가로 라인 전체 평가
     for (int r = 0; r < Board_2024180014::SIZE; ++r) {
@@ -698,13 +681,13 @@ int static_eval_func_2024180014(const Board_2024180014& board, StoneType_2024180
 int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line, StoneType_2024180014 stone_type) {
     int score = 0;
     StoneType_2024180014 empty = StoneType_2024180014::EMPTY;
-    StoneType_2024180014 opponent = (stone_type == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
+    StoneType_2024180014 opponent = (stone_type == StoneType_2024180014::BLACK_2024180014) ? StoneType_2024180014::WHITE_2024180014 : StoneType_2024180014::BLACK_2024180014;
 
     // 패턴별 점수 정의
     constexpr int SCORE_FIVE = 1000000000;
     constexpr int SCORE_OPEN_FOUR = 6000000;
     constexpr int SCORE_CLOSED_FOUR = 500000;
-    constexpr int SCORE_BLANKED_FOUR = 500000; // 띈 넷도 막힌 넷과 유사한 위력
+    constexpr int SCORE_BLANKED_FOUR = 500000;
     constexpr int SCORE_OPEN_THREE = 400000;
     constexpr int SCORE_BLANKED_OPEN_THREE = 5000;
     constexpr int SCORE_CLOSED_THREE = 1000;
@@ -847,7 +830,7 @@ int analyze_patterns_in_line_2024180014(const vector<StoneType_2024180014>& line
 vector<StoneType_2024180014> extract_horizontal_line_2024180014(const Board_2024180014& board, int row)
 {
     vector<StoneType_2024180014> line;
-    line.reserve(Board_2024180014::SIZE); // 메모리 미리 할당
+    line.reserve(Board_2024180014::SIZE);
 
     for (int c = 0; c < Board_2024180014::SIZE; ++c) {
         line.push_back(board.getStone(row, c));
@@ -869,7 +852,6 @@ vector<StoneType_2024180014> extract_diagonal_main_2024180014(const Board_202418
     vector<StoneType_2024180014> line;
     line.reserve(Board_2024180014::SIZE);
 
-    // 라인을 왼쪽 위에서 오른쪽 아래 방향으로 일관되게 추출
     for (int c = 0; c < Board_2024180014::SIZE; ++c) {
         int r = k + c;
         if (board.isOnBoard(r, c)) {
@@ -883,9 +865,8 @@ vector<StoneType_2024180014> extract_diagonal_anti_2024180014(const Board_202418
     vector<StoneType_2024180014> line;
     line.reserve(Board_2024180014::SIZE);
 
-    // 라인을 위쪽에서 아래쪽 방향으로 일관되게 추출
-    int r_start = std::max(0, k - (Board_2024180014::SIZE - 1));
-    int r_end = std::min(Board_2024180014::SIZE - 1, k);
+    int r_start = max(0, k - (Board_2024180014::SIZE - 1));
+    int r_end = min(Board_2024180014::SIZE - 1, k);
 
     for (int r = r_start; r <= r_end; ++r) {
         int c = k - r;
@@ -899,7 +880,6 @@ vector<StoneType_2024180014> extractLineSegment_2024180014(const Board_202418001
     segment.reserve(9);
 
     for (int i = -4; i <= 4; ++i) {
-        // (r, c)는 방금 돌을 놓은 위치이므로 i=0일 때를 따로 처리
         if (i == 0) {
             segment.push_back(player);
             continue;
@@ -912,15 +892,13 @@ vector<StoneType_2024180014> extractLineSegment_2024180014(const Board_202418001
             segment.push_back(board.getStone(nr, nc));
         }
         else {
-            segment.push_back(StoneType_2024180014::WALL); // 보드 밖은 벽으로 처리
+            segment.push_back(StoneType_2024180014::WALL);
         }
     }
     return segment;
 }
 void findBestPatternInSegment_2024180014(const vector<StoneType_2024180014>& segment, int r, int c, LineType_2024180014 line, StoneType_2024180014 player, PlayerPatterns_2024180014& patterns) {
-    StoneType_2024180014 opponent = (player == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
-
-    // --- 이 라인에서 발견되는 모든 패턴을 독립적으로 체크하고 추가합니다 ---
+    StoneType_2024180014 opponent = (player == StoneType_2024180014::BLACK_2024180014) ? StoneType_2024180014::WHITE_2024180014 : StoneType_2024180014::BLACK_2024180014;
 
     // 5목 체크 (window: 5)
     for (int i = 0; i <= 9 - 5; ++i) {
@@ -928,8 +906,6 @@ void findBestPatternInSegment_2024180014(const vector<StoneType_2024180014>& seg
             std::vector<StoneType_2024180014> window(segment.begin() + i, segment.begin() + i + 5);
             if (PatternUtils::isFive(window, player)) {
                 patterns.win_moves.push_back({ Move_2024180014(r, c), line });
-                // 5목은 가장 강력하므로, 이 라인에서 다른 패턴은 더 이상 의미가 없을 수 있습니다.
-                // 따라서 여기서 return하여 함수를 종료하는 것이 효율적입니다.
                 return;
             }
         }
@@ -977,11 +953,9 @@ void findBestPatternInSegment_2024180014(const vector<StoneType_2024180014>& seg
     for (int i = 0; i <= 9 - 6; ++i) {
         if (i <= 4 && i + 5 >= 4) {
             std::vector<StoneType_2024180014> window(segment.begin() + i, segment.begin() + i + 6);
-            // 열린 삼
             if (PatternUtils::isBlankedOpenThree(window, player)) {
                 patterns.blanked_open_three_moves.push_back({ Move_2024180014(r, c), line });
             }
-            // 닫힌 삼
             else if (PatternUtils::isBlankedCloseThree(window, player, opponent)) {
                 patterns.blanked_close_three_moves.push_back({ Move_2024180014(r, c), line });
             }
@@ -1061,7 +1035,6 @@ vector<Move_2024180014> generate_neighborhood_moves_2024180014(const Board_20241
         }
     }
 
-    // set에 저장된 후보들을 vector로 변환하여 반환
     return vector<Move_2024180014>(candidate_set.begin(), candidate_set.end());
 }
 inline bool isBlocker_2024180014(StoneType_2024180014 stone_to_check, StoneType_2024180014 opponent_player) {
@@ -1070,9 +1043,9 @@ inline bool isBlocker_2024180014(StoneType_2024180014 stone_to_check, StoneType_
 void add_sequence_to_book(const std::vector<Move_2024180014>& base_sequence) {
     if (base_sequence.empty()) return;
 
-    constexpr int center = Board_2024180014::SIZE / 2; // 중심점 (9)
+    constexpr int center = Board_2024180014::SIZE / 2;
 
-    // 8개의 대칭 변환 함수 정의 (람다 사용)
+    // 8개의 대칭 변환 함수 정의
     vector<function<Move_2024180014(Move_2024180014)>> transforms;
 
     // 1. 원본
@@ -1093,26 +1066,21 @@ void add_sequence_to_book(const std::vector<Move_2024180014>& base_sequence) {
     // 8. 좌우 반전 + 270도 회전
     transforms.push_back([&](Move_2024180014 m) { m.col = center - (m.col - center); return Move_2024180014(center + (m.col - center), center - (m.row - center)); });
 
-    // 8개의 변환을 각각 적용하여 오프닝 북에 추가
     for (const auto& transform : transforms) {
         Board_2024180014 temp_board;
-        StoneType_2024180014 current_stone = StoneType_2024180014::BLACK;
+        StoneType_2024180014 current_stone = StoneType_2024180014::BLACK_2024180014;
 
         for (size_t i = 0; i < base_sequence.size(); ++i) {
-            // 현재 기보의 수를 현재 변환에 맞게 대칭 이동
             Move_2024180014 transformed_move = transform(base_sequence[i]);
 
             string key = temp_board.toStringKey();
 
-            // 오프닝 북에 해당 상태가 아직 없다면, 다음 수를 등록
-            // (이미 다른 대칭 형태로 등록된 경우 중복 방지)
             if (opening_book.find(key) == opening_book.end()) {
                 opening_book[key] = transformed_move;
             }
 
-            // 보드에 대칭 이동된 수를 놓아 다음 상태로 진행
             temp_board.placeStone(transformed_move, current_stone);
-            current_stone = (current_stone == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
+            current_stone = (current_stone == StoneType_2024180014::BLACK_2024180014) ? StoneType_2024180014::WHITE_2024180014 : StoneType_2024180014::BLACK_2024180014;
         }
     }
 }
@@ -1150,43 +1118,34 @@ OpeningBookInitializer book_initializer;
 
 // Node 멤버 함수
 void Node_2024180014::generate_children_2024180014(const Board_2024180014& current_board, StoneType_2024180014 player_to_move) {
-    // 최종 후보 Move들을 담을 하나의 벡터
     vector<Move_2024180014> candidate_moves;
 
-    // 1. PatternAnalyzer로 보드를 단 한 번 분석합니다.
     PatternAnalyzer_2024180014 analyzer;
     analyzer.analyze_2024180014(current_board, player_to_move);
 
-    StoneType_2024180014 opponent_player = (player_to_move == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
+    StoneType_2024180014 opponent_player = (player_to_move == StoneType_2024180014::BLACK_2024180014) ? StoneType_2024180014::WHITE_2024180014 : StoneType_2024180014::BLACK_2024180014;
 
-    // 2. 가장 높은 우선순위부터 순서대로 확인하여 후보군을 결정합니다.
-
-    // 🥇 1순위: 내가 즉시 이기는 수 (오목)
     const auto& my_wins = analyzer.getAIWinMoves();
     if (!my_wins.empty()) {
         //cout << "[DEBUG] >> Priority 1: AI Win Found!" << endl;
         candidate_moves = extract_moves_2024180014(my_wins);
     }
-    // 🥈 2순위: 상대가 즉시 이기는 수 (방어)
     else if (!analyzer.getOpponentWinMoves().empty()) {
         //cout << "[DEBUG] >> Priority 2: Opponent Win Found! Blocking..." << endl;
         candidate_moves = extract_moves_2024180014(analyzer.getOpponentWinMoves());
     }
-    // 🥉 3순위: 나의 필승기 (사삼 or 열린 사 등)
     else if (!analyzer.getAIFourThreeMoves().empty() || !analyzer.getAIOpenFourMoves().empty()) {
         //cout << "[DEBUG] >> Priority 3: AI Unstoppable Attack Found!" << endl;
         candidate_moves = extract_moves_2024180014(analyzer.getAIFourThreeMoves());
         const auto& open_fours = extract_moves_2024180014(analyzer.getAIOpenFourMoves());
         candidate_moves.insert(candidate_moves.end(), open_fours.begin(), open_fours.end());
     }
-    // 🏅 4순위: 상대의 필승기 (사삼 또는 열린 넷) 방어
     else if (!analyzer.getOpponentFourThreeMoves().empty() || !analyzer.getOpponentOpenFourMoves().empty()) {
         //cout << "[DEBUG] >> Priority 4: Opponent Unstoppable Attack Found! Blocking..." << endl;
         candidate_moves = extract_moves_2024180014(analyzer.getOpponentFourThreeMoves());
         const auto& opponent_open_fours = extract_moves_2024180014(analyzer.getOpponentOpenFourMoves());
         candidate_moves.insert(candidate_moves.end(), opponent_open_fours.begin(), opponent_open_fours.end());
     }
-    // 🏅 5순위: 위에서 결정적인 수가 없었을 경우, 일반적인 중요 패턴들을 조합합니다.
     else {
         //cout << "[DEBUG] >> Priority 5: Normal Developing Moves." << endl;
         struct PrioritizedMove {
@@ -1195,7 +1154,6 @@ void Node_2024180014::generate_children_2024180014(const Board_2024180014& curre
         };
         std::vector<PrioritizedMove> scored_moves;
 
-        // 2. 각 패턴에 대한 가중치(점수) 정의
         constexpr int P_SCORE_MAKE_CLOSED_FOUR = 100000;
         constexpr int P_SCORE_BLOCK_OPEN_THREE = 90000;
         constexpr int P_SCORE_MAKE_OPEN_THREE = 50000;
@@ -1253,7 +1211,7 @@ void Node_2024180014::generate_children_2024180014(const Board_2024180014& curre
         }
     }
     
-    if (player_to_move == StoneType_2024180014::BLACK) {
+    if (player_to_move == StoneType_2024180014::BLACK_2024180014) {
         const auto& forbidden_infos = analyzer.getAIForbiddenSpot();
         if (!forbidden_infos.empty()) {
             const auto& forbidden_spots = extract_moves_2024180014(forbidden_infos);
@@ -1270,7 +1228,6 @@ void Node_2024180014::generate_children_2024180014(const Board_2024180014& curre
     if (candidate_moves.empty()) {
         //cout << "[DEBUG] >> Fallback: Using Neighborhood Heuristic." << endl;
         candidate_moves = generate_neighborhood_moves_2024180014(current_board);
-        // 게임 첫 수 처리
         if (candidate_moves.empty() && current_board.isEmpty()) {
             candidate_moves.push_back(Move_2024180014(Board_2024180014::SIZE / 2, Board_2024180014::SIZE / 2));
         }
@@ -1306,10 +1263,9 @@ vector<Move_2024180014> Node_2024180014::extract_moves_2024180014(const vector<P
 
 // PatternAnalyzer 멤버 함수
 void PatternAnalyzer_2024180014::analyze_2024180014(const Board_2024180014& board, StoneType_2024180014 ai_player) {
-    // playerPattern type
     ai_patterns.clear();
     opponent_patterns.clear();
-    StoneType_2024180014 opponent_player = (ai_player == StoneType_2024180014::BLACK) ? StoneType_2024180014::WHITE : StoneType_2024180014::BLACK;
+    StoneType_2024180014 opponent_player = (ai_player == StoneType_2024180014::BLACK_2024180014) ? StoneType_2024180014::WHITE_2024180014 : StoneType_2024180014::BLACK_2024180014;
 
     for (int r = 0; r < Board_2024180014::SIZE; ++r) {
         for (int c = 0; c < Board_2024180014::SIZE; ++c) {
@@ -1325,30 +1281,25 @@ void PatternAnalyzer_2024180014::checkPatternsAfterMove_2024180014(const Board_2
     // --- 1. 이 Move(r,c) 하나만을 위한 임시 패턴 저장소 생성 ---
     PlayerPatterns_2024180014 temp_patterns;
 
-    // 가상으로 돌을 놓아볼 임시 보드 생성
     Board_2024180014 temp_board = board;
     temp_board.placeStone(Move_2024180014(r, c), player);
 
-    // 4개의 방향(축)을 순회하며 임시 저장소(temp_patterns)를 채움
     const int directions[4][2] = { {0, 1}, {1, 0}, {1, 1}, {1, -1} };
     const LineType_2024180014 line_types[4] = { LineType_2024180014::HORIZONTAL, LineType_2024180014::VERTICAL, LineType_2024180014::DIAGONAL_MAIN, LineType_2024180014::DIAGONAL_ANTI };
 
     for (int i = 0; i < 4; ++i) {
         vector<StoneType_2024180014> segment = extractLineSegment_2024180014(temp_board, r, c, directions[i][0], directions[i][1], player);
 
-        // ★ 중요: findBestPatternInSegment 함수는 이제 temp_patterns를 직접 채웁니다.
         findBestPatternInSegment_2024180014(segment, r, c, line_types[i], player, temp_patterns);
     }
 
     // --- 2. 임시 저장소(temp_patterns)의 내용을 보고 최종 패턴 판단 ---
 
-    // 🥇 1순위: 오목(Five) 체크
     if (!temp_patterns.win_moves.empty()) {
         final_patterns.win_moves.push_back({ Move_2024180014(r, c), LineType_2024180014::DONTCARE });
-        return; // 게임이 끝났으므로 다른 어떤 패턴도 더 이상 중요하지 않음
+        return;
     }
 
-    // "열린 삼 계열"과 "넷 계열" 패턴의 개수를 센다
     int four_count = (int)temp_patterns.open_four_moves.size() +
         (int)temp_patterns.close_four_moves.size() +
         (int)temp_patterns.blanked_four_moves.size();
@@ -1361,20 +1312,16 @@ void PatternAnalyzer_2024180014::checkPatternsAfterMove_2024180014(const Board_2
     bool is_33 = (open_three_count >= 2);
     bool is_43 = (four_count >= 1 && open_three_count >= 1);
 
-    // 🥈 금수(쌍사, 쌍삼) 체크 (흑돌일 경우)
-    if (player == StoneType_2024180014::BLACK && (is_44 || is_33)) {
+    if (player == StoneType_2024180014::BLACK_2024180014 && (is_44 || is_33)) {
         final_patterns.forbidden_spot.push_back({ Move_2024180014(r, c), LineType_2024180014::DONTCARE });
-        // 금수라도 다른 패턴일 수 있으므로 return하지 않고, 나중에 generate_children에서 필터링
     }
 
-    // 🥉 필승기(사삼, 백돌의 쌍사/쌍삼) 체크
-    if (is_43 || (player == StoneType_2024180014::WHITE && (is_44 || is_33))) {
+    if (is_43 || (player == StoneType_2024180014::WHITE_2024180014 && (is_44 || is_33))) {
         final_patterns.four_three_moves.push_back({ Move_2024180014(r, c), LineType_2024180014::DONTCARE });
-        return; // 필승기를 찾았으면, 더 낮은 순위의 단일 패턴으로 중복 분류하지 않음
+        return;
     }
 
     // --- 3. 단일 패턴들을 진짜 final_patterns 객체에 추가 ---
-    // 위의 필승기나 금수에 해당하지 않았을 경우, 발견된 단일 패턴들을 그대로 옮겨 담는다.
     // 4목 패턴
     final_patterns.open_four_moves.insert(final_patterns.open_four_moves.end(), temp_patterns.open_four_moves.begin(), temp_patterns.open_four_moves.end());
     final_patterns.close_four_moves.insert(final_patterns.close_four_moves.end(), temp_patterns.close_four_moves.begin(), temp_patterns.close_four_moves.end());
@@ -1410,12 +1357,11 @@ StoneType_2024180014 Board_2024180014::checkForWin_2024180014(const Move_2024180
         return StoneType_2024180014::EMPTY;
     }
 
-    // 4개의 축(가로, 세로, 대각선\, 대각선/)에 대한 방향 벡터
     const int dr[] = { 0, 1, 1, 1 };
     const int dc[] = { 1, 0, 1, -1 };
 
     for (int i = 0; i < 4; ++i) {
-        int consecutive_count = 1; // 방금 놓은 돌 포함
+        int consecutive_count = 1;
 
         // 정방향(+)으로 같은 돌 세기
         for (int j = 1; j < 5; ++j) {
@@ -1442,42 +1388,42 @@ StoneType_2024180014 Board_2024180014::checkForWin_2024180014(const Move_2024180
         }
 
         if (consecutive_count >= 5) {
-            return stone; // 오목 완성!
+            return stone;
         }
     }
 
-    return StoneType_2024180014::EMPTY; // 오목이 완성되지 않음
+    return StoneType_2024180014::EMPTY;
 }
 
 void WhiteAttack_2024180014(int* x, int* y)
 {
     Board_2024180014 tempBoard = board_2024180014;
-    Move_2024180014 location = find_best_move_2024180014(tempBoard, StoneType_2024180014::WHITE);
+    Move_2024180014 location = find_best_move_2024180014(tempBoard, StoneType_2024180014::WHITE_2024180014);
 
     *y = location.row;
     *x = location.col;
 
-    board_2024180014.placeStone(location, StoneType_2024180014::WHITE);
+    board_2024180014.placeStone(location, StoneType_2024180014::WHITE_2024180014);
 }
 void WhiteDefence_2024180014(int x, int y)
 {
-    Move_2024180014 location(x, y);
+    Move_2024180014 location(y, x);
 
-    board_2024180014.placeStone(location, StoneType_2024180014::BLACK);
+    board_2024180014.placeStone(location, StoneType_2024180014::BLACK_2024180014);
 }
 void BlackAttack_2024180014(int* x, int* y)
 {
     Board_2024180014 tempBoard = board_2024180014;
-    Move_2024180014 location = find_best_move_2024180014(tempBoard, StoneType_2024180014::BLACK);
+    Move_2024180014 location = find_best_move_2024180014(tempBoard, StoneType_2024180014::BLACK_2024180014);
 
     *y = location.row;
     *x = location.col;
 
-    board_2024180014.placeStone(location, StoneType_2024180014::BLACK);
+    board_2024180014.placeStone(location, StoneType_2024180014::BLACK_2024180014);
 }
 void BlackDefence_2024180014(int x, int y)
 {
-    Move_2024180014 location(x, y);
+    Move_2024180014 location(y, x);
 
-    board_2024180014.placeStone(location, StoneType_2024180014::WHITE);
+    board_2024180014.placeStone(location, StoneType_2024180014::WHITE_2024180014);
 }
